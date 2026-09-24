@@ -302,6 +302,7 @@ cd docs && bundle install && bundle exec jekyll serve     # or: docker compose u
     - The root compose healthcheck for `notifications` uses `wget`, which the distroless image lacks, so it always reports unhealthy.
 12. **The notification service has no Tracearr module**, although the app does.
 13. **`provider` is not declared in `pubspec.yaml`.** It works only as a transitive dependency.
+    Keep `pubspec.lock` in sync: after any `pubspec.yaml` change, run `flutter pub get` and commit the lockfile.
 14. **Pinned dependencies:**
     - `file_picker ^12.0.0-beta.4`. In the new static API, `saveFile(bytes:)` writes the file itself.
     - `xml ^6`
