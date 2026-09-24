@@ -16,6 +16,7 @@
 | Remote images are blocked on web | COEP `require-corp` | The image host must send CORP or CORS headers |
 | Flavor shows EDGE in a "stable" build | `FLAVOR` env var was unset during `environment_config:generate`. `--dart-define` is ignored | Export `FLAVOR=stable` **before** running codegen |
 | Android release build fails on signing | `android/key.properties` is missing | Use `flutter build apk --debug`, or create `key.properties` from `key.properties.sample` |
+| Tapping a link or external module does nothing on Android | `url_launcher_android` **throws** a `PlatformException` (it does not return `false`) when `externalNonBrowserApplication` finds no native app. A single outer `try` then skips the browser fallback | Wrap each launch attempt in its own `try`. See `openLink()` in `lib/extensions/string/links.dart` |
 | Save file does nothing on desktop | file_picker 12 API change | Use `FilePicker.saveFile(bytes: ..., lockParentWindow: true)`. It writes the file itself (commit `99d3578`) |
 
 In-app logs are at Settings → System → Logs, stored in the Hive `logs` box and capped at 50 entries. Log with

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:lunasea/core.dart';
 import 'package:lunasea/database/models/external_module.dart';
 import 'package:lunasea/modules/settings.dart';
+import 'package:lunasea/modules/settings/routes/configuration_external_modules/widgets/address.dart';
+import 'package:lunasea/modules/settings/routes/configuration_external_modules/widgets/address_form.dart';
 import 'package:lunasea/widgets/pages/invalid_route.dart';
 
 class ConfigurationExternalModulesEditRoute extends StatefulWidget {
@@ -49,6 +51,13 @@ class _State extends State<ConfigurationExternalModulesEditRoute>
     return LunaBottomActionBar(
       actions: [
         LunaButton.text(
+          text: 'settings.TestConnection'.tr(),
+          icon: Icons.wifi_tethering_rounded,
+          onTap: () async => testExternalModuleConnection(
+            ExternalModuleAddress.parse(_module?.host ?? '').url,
+          ),
+        ),
+        LunaButton.text(
           text: 'settings.DeleteModule'.tr(),
           icon: Icons.delete_rounded,
           color: LunaColours.red,
@@ -78,7 +87,13 @@ class _State extends State<ConfigurationExternalModulesEditRoute>
           controller: scrollController,
           children: [
             _displayNameTile(),
-            _hostTile(),
+            ExternalModuleAddressForm(
+              address: ExternalModuleAddress.parse(_module!.host),
+              onChanged: (address) {
+                _module!.host = address.url;
+                _module!.save();
+              },
+            ),
           ],
         );
       },
@@ -102,26 +117,6 @@ class _State extends State<ConfigurationExternalModulesEditRoute>
           prefill: _displayName,
         );
         if (values.item1) _module!.displayName = values.item2;
-        _module!.save();
-      },
-    );
-  }
-
-  Widget _hostTile() {
-    String _host = _module!.host;
-    return LunaBlock(
-      title: 'settings.Host'.tr(),
-      body: [
-        TextSpan(text: _host.isEmpty ? 'lunasea.NotSet'.tr() : _host),
-      ],
-      trailing: const LunaIconButton.arrow(),
-      onTap: () async {
-        Tuple2<bool, String> values =
-            await SettingsDialogs().editExternalModuleHost(
-          context,
-          prefill: _host,
-        );
-        if (values.item1) _module!.host = values.item2;
         _module!.save();
       },
     );

@@ -7,6 +7,7 @@ import 'package:lunasea/modules/dashboard/core/adapters/calendar_starting_day.da
 import 'package:lunasea/modules/dashboard/core/adapters/calendar_starting_size.dart';
 import 'package:lunasea/modules/dashboard/core/adapters/calendar_starting_type.dart';
 import 'package:lunasea/modules/settings/core/types/header.dart';
+import 'package:lunasea/modules/settings/routes/configuration_external_modules/widgets/address.dart';
 import 'package:lunasea/system/state.dart';
 import 'package:lunasea/utils/validator.dart';
 import 'package:lunasea/vendor.dart';
@@ -140,7 +141,7 @@ class SettingsDialogs {
     return Tuple2(_flag, _textController.text);
   }
 
-  Future<Tuple2<bool, String>> editExternalModuleHost(
+  Future<Tuple2<bool, String>> editExternalModuleHostname(
     BuildContext context, {
     String prefill = '',
   }) async {
@@ -157,7 +158,7 @@ class SettingsDialogs {
 
     await LunaDialog.dialog(
       context: context,
-      title: 'settings.Host'.tr(),
+      title: 'settings.Hostname'.tr(),
       buttons: [
         LunaDialog.button(
           text: 'lunasea.Set'.tr(),
@@ -166,42 +167,86 @@ class SettingsDialogs {
       ],
       content: [
         LunaDialog.textContent(
-          text: '${LunaUI.TEXT_BULLET} ${'settings.HostHint1'.tr()}',
+          text: '${LunaUI.TEXT_BULLET} ${'settings.HostnameHint1'.tr()}',
           textAlign: TextAlign.left,
         ),
         LunaDialog.textContent(
-          text: '${LunaUI.TEXT_BULLET} ${'settings.HostHint2'.tr()}',
-          textAlign: TextAlign.left,
-        ),
-        LunaDialog.textContent(
-          text: '${LunaUI.TEXT_BULLET} ${'settings.HostHint3'.tr()}',
-          textAlign: TextAlign.left,
-        ),
-        LunaDialog.textContent(
-          text: '${LunaUI.TEXT_BULLET} ${'settings.HostHint4'.tr()}',
+          text: '${LunaUI.TEXT_BULLET} ${'settings.HostnameHint2'.tr()}',
           textAlign: TextAlign.left,
         ),
         Form(
           key: _formKey,
           child: LunaDialog.textFormInput(
             controller: _textController,
-            title: 'settings.Host'.tr(),
+            title: 'settings.Hostname'.tr(),
             keyboardType: TextInputType.url,
             onSubmitted: (_) => _setValues(true),
             validator: (value) {
-              // Allow empty value
-              if (value?.isEmpty ?? true) return null;
-              // Test for https:// or http://
-              RegExp exp = RegExp(r"^(http|https)://", caseSensitive: false);
-              if (exp.hasMatch(value!)) return null;
-              return 'settings.HostValidation'.tr();
+              final hostname = value?.trim() ?? '';
+              if (hostname.isEmpty) return null;
+              if (!ExternalModuleAddress.isValidHostname(hostname)) {
+                return 'settings.HostnameValidation'.tr();
+              }
+              return null;
             },
           ),
         ),
       ],
       contentPadding: LunaDialog.inputTextDialogContentPadding(),
     );
-    return Tuple2(_flag, _textController.text);
+    return Tuple2(_flag, _textController.text.trim());
+  }
+
+  Future<Tuple2<bool, String>> editExternalModulePort(
+    BuildContext context, {
+    String prefill = '',
+  }) async {
+    bool _flag = false;
+    final _formKey = GlobalKey<FormState>();
+    final _textController = TextEditingController()..text = prefill;
+
+    void _setValues(bool flag) {
+      if (_formKey.currentState!.validate()) {
+        _flag = flag;
+        Navigator.of(context).pop();
+      }
+    }
+
+    await LunaDialog.dialog(
+      context: context,
+      title: 'settings.Port'.tr(),
+      buttons: [
+        LunaDialog.button(
+          text: 'lunasea.Set'.tr(),
+          onPressed: () => _setValues(true),
+        ),
+      ],
+      content: [
+        LunaDialog.textContent(
+          text: '${LunaUI.TEXT_BULLET} ${'settings.PortHint1'.tr()}',
+          textAlign: TextAlign.left,
+        ),
+        Form(
+          key: _formKey,
+          child: LunaDialog.textFormInput(
+            controller: _textController,
+            title: 'settings.Port'.tr(),
+            keyboardType: TextInputType.number,
+            onSubmitted: (_) => _setValues(true),
+            validator: (value) {
+              final port = value?.trim() ?? '';
+              if (port.isEmpty) return null;
+              if (ExternalModuleAddress.parsePort(port) == null) {
+                return 'settings.PortValidation'.tr();
+              }
+              return null;
+            },
+          ),
+        ),
+      ],
+      contentPadding: LunaDialog.inputTextDialogContentPadding(),
+    );
+    return Tuple2(_flag, _textController.text.trim());
   }
 
   Future<bool> deleteIndexer(BuildContext context) async {
