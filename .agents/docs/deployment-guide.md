@@ -50,6 +50,20 @@ Editing them does nothing.
 - If all four secrets are set, CI writes `android/key.jks` and `android/key.properties`.
 - If not, it generates a **throwaway keystore every run**. APKs signed this way cannot upgrade over each other.
 
+### `auto-release-android.yml`: auto-publish on version bump
+
+This workflow runs on a **push to `main` that changes `lunasea/pubspec.yaml`**. It can also be started manually, with a `force` input that rebuilds an existing release.
+
+What it does:
+1. Reads `X.Y.Z` from `pubspec.yaml`. If release `vX.Y.Z` already exists, it stops and changes nothing.
+2. Otherwise it builds a signed APK and runs `gh release create vX.Y.Z --generate-notes`, attaching `lunasea-X.Y.Z-android.apk`.
+
+Things to know:
+- The `versionCode` is `X*10000 + Y*100 + Z` (for example, 1.2.0 → 10200). Y and Z must stay below 100.
+- It **fails** if any of the four `ANDROID_KEYSTORE_*` secrets is missing. It never publishes an APK signed with a throwaway key.
+- The release is created with `GITHUB_TOKEN`, and GitHub does not start other workflows from events that token causes. So `build-android.yml` and the other `build-*.yml` workflows do **not** run for these releases.
+- Manual runs from the Actions UI only show up once this workflow file exists on the default branch (`master`).
+
 ### `build-docker.yml`
 
 - **Matrix:**
