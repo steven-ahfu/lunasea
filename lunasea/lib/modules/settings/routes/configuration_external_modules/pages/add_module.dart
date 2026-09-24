@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:lunasea/core.dart';
 import 'package:lunasea/database/models/external_module.dart';
-import 'package:lunasea/modules/settings.dart';
+import 'package:lunasea/modules/settings/routes/configuration_external_modules/widgets/address.dart';
+import 'package:lunasea/modules/settings/routes/configuration_external_modules/widgets/address_form.dart';
 
 class ConfigurationExternalModulesAddRoute extends StatefulWidget {
   const ConfigurationExternalModulesAddRoute({
@@ -16,6 +17,7 @@ class _State extends State<ConfigurationExternalModulesAddRoute>
     with LunaScrollControllerMixin {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   final LunaExternalModule _module = LunaExternalModule();
+  ExternalModuleAddress _address = const ExternalModuleAddress();
 
   @override
   Widget build(BuildContext context) {
@@ -38,15 +40,21 @@ class _State extends State<ConfigurationExternalModulesAddRoute>
     return LunaBottomActionBar(
       actions: [
         LunaButton.text(
+          text: 'settings.TestConnection'.tr(),
+          icon: Icons.wifi_tethering_rounded,
+          onTap: () async => testExternalModuleConnection(_address.url),
+        ),
+        LunaButton.text(
           text: 'settings.AddModule'.tr(),
           icon: Icons.add_rounded,
           onTap: () async {
-            if (_module.displayName.isEmpty || _module.host.isEmpty) {
+            if (_module.displayName.isEmpty || !_address.isComplete) {
               showLunaErrorSnackBar(
                 title: 'settings.AddModuleFailed'.tr(),
                 message: 'settings.AllFieldsAreRequired'.tr(),
               );
             } else {
+              _module.host = _address.url;
               LunaBox.externalModules.create(_module);
               showLunaSuccessSnackBar(
                 title: 'settings.AddModuleSuccess'.tr(),
@@ -65,7 +73,10 @@ class _State extends State<ConfigurationExternalModulesAddRoute>
       controller: scrollController,
       children: [
         _displayNameTile(),
-        _hostTile(),
+        ExternalModuleAddressForm(
+          address: _address,
+          onChanged: (address) => setState(() => _address = address),
+        ),
       ],
     );
   }
@@ -87,25 +98,6 @@ class _State extends State<ConfigurationExternalModulesAddRoute>
           prefill: _displayName,
         );
         if (values.item1) setState(() => _module.displayName = values.item2);
-      },
-    );
-  }
-
-  Widget _hostTile() {
-    String _host = _module.host;
-    return LunaBlock(
-      title: 'settings.Host'.tr(),
-      body: [
-        TextSpan(text: _host.isEmpty ? 'lunasea.NotSet'.tr() : _host),
-      ],
-      trailing: const LunaIconButton.arrow(),
-      onTap: () async {
-        Tuple2<bool, String> values =
-            await SettingsDialogs().editExternalModuleHost(
-          context,
-          prefill: _host,
-        );
-        if (values.item1) setState(() => _module.host = values.item2);
       },
     );
   }
