@@ -5,3 +5,7 @@ gradle-wrapper.jar
 /gradlew.bat
 /local.properties
 GeneratedPluginRegistrant.java
+
+# Android Studio "Generate Signed APK" export dir - build output, not source.
+/app/release/
+/app/debug/
