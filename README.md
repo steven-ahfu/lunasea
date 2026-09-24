@@ -14,4 +14,4 @@
 
 ## Releases
 
-Docker images are built and published to this repository's [GitHub Container Registry](https://github.com/features/packages) on each GitHub Release. See [`.github/workflows/build-docker.yml`](.github/workflows/build-docker.yml).
+~~Docker images are built and published to this repository's [GitHub Container Registry](https://github.com/features/packages) on each GitHub Release. See [`.github/workflows/build-docker.yml`](.github/workflows/build-docker.yml).~~

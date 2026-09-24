@@ -1,6 +1,6 @@
 name: lunasea
 description: Self-Hosted Controller
-version: 1.2.0+1
+version: 1.3.0
 publish_to: "none"
 environment:
   sdk: ">=3.9.0 <4.0.0"
@@ -70,7 +70,6 @@ dev_dependencies:
   # Tooling
   flutter_launcher_icons: ^0.14.3
   flutter_lints: ^6.0.0
-  flutter_native_splash: ^2.3.2
   msix: ^3.16.1
 dependency_overrides:
   http: ^1.6.0
@@ -90,6 +89,15 @@ flutter_icons:
   image_path: assets/icon/icon.png
   adaptive_icon_background: "#32323E"
   adaptive_icon_foreground: assets/icon/icon_adaptive.png
+# Splash config kept for regeneration only. flutter_native_splash is NOT a
+# dependency: as a dev_dependency its Android plugin was stripped from release
+# builds while GeneratedPluginRegistrant.java still referenced it, breaking any
+# release build run through Gradle/Android Studio instead of the Flutter tool.
+# Its output (android res launch_background.xml + styles.xml, and the iOS/web
+# equivalents) is committed. To regenerate:
+#   flutter pub add --dev flutter_native_splash
+#   dart run flutter_native_splash:create
+#   flutter pub remove flutter_native_splash
 flutter_native_splash:
   image: assets/images/branding_full.png
   color: "#32323E"

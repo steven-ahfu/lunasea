@@ -2,7 +2,8 @@ name: Auto Release (APK)
 
 # Fires on every push to main (the working branch) that touches the version.
 # The version is single-sourced as `version:` in lunasea/pubspec.yaml
-# (`X.Y.Z+N`; only X.Y.Z is used). It reads the version, and if a release for
+# (plain `X.Y.Z`; a `+N` build suffix is tolerated but unused, and the CI build
+# number is passed explicitly below). It reads the version, and if a release for
 # it doesn't already exist it builds the signed release APK and publishes a
 # GitHub Release tagged v<version>. If the release already exists it's a
 # no-op — so it only ever publishes a NEW version once.
@@ -153,13 +154,33 @@ jobs:
 
       - name: Build release APK
         run: |
+          set -euo pipefail
           flutter build apk --release \
             --build-name=${{ needs.check.outputs.version }} \
             --build-number=${{ needs.check.outputs.version_code }}
+          # Gradle's drop dir (see android/app/build.gradle) already emits the
+          # canonical name, byte-for-byte identical to a local build:
+          #   LunaSea_v<version>-release.apk
+          shopt -s nullglob
+          APKS=(build/apk/LunaSea_v*-release.apk)
+          if [[ ${#APKS[@]} -ne 1 ]]; then
+            echo "::error::Expected exactly 1 release APK in build/apk, found ${#APKS[@]}"
+            ls -la build/apk || true
+            exit 1
+          fi
           mkdir -p ../output
-          cp build/app/outputs/flutter-apk/app-release.apk \
-            "../output/lunasea-${{ needs.check.outputs.version }}-android.apk"
+          cp "${APKS[0]}" ../output/
           ls -lh ../output
+
+      - name: Verify APK signature
+        run: |
+          set -euo pipefail
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -name apksigner | sort -V | tail -1)"
+          for apk in output/*.apk; do
+            echo "== $apk"
+            "$APKSIGNER" verify --verbose --print-certs "$apk"
+          done
+        working-directory: .
 
       - name: Publish GitHub Release
         working-directory: .

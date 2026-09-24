@@ -1,3 +1,5 @@
+import com.android.build.api.artifact.SingleArtifact
+
 plugins {
     id "com.android.application"
     id "kotlin-android"
@@ -71,6 +73,58 @@ android {
       release {
         signingConfig signingConfigs.release
       }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// APK naming - self-describing filenames for local builds and CI.
+//
+// Flutter hardcodes build/app/outputs/flutter-apk/app-<mode>.apk (see
+// FlutterPlugin.kt, filename = "app"), so that path cannot be renamed.
+// The two surfaces we do control:
+//   1. base.archivesName -> build/app/outputs/apk/<type>/LunaSea_v<ver>-<type>.apk
+//   2. the drop dir below -> build/apk/LunaSea_v<ver>-<type>.apk
+// CI globs the drop dir, so CI and local filenames are identical.
+// ---------------------------------------------------------------------------
+def apkAppName = "LunaSea"
+
+base {
+    archivesName = "${apkAppName}_v${flutterVersionName}"
+}
+
+def apkDropDir = rootProject.layout.buildDirectory.dir("apk")
+
+androidComponents {
+    onVariants(selector().all()) { variant ->
+        def variantCap = variant.name.capitalize()
+        def flavor = variant.flavorName ?: ''
+        def buildType = variant.buildType ?: ''
+        // Use the pubspec version, NOT variant.outputs.versionName: the debug
+        // build type sets versionNameSuffix "-dev", which would otherwise yield
+        // LunaSea_v1.3.0-dev-debug.apk and disagree with base.archivesName.
+        def versionName = flutterVersionName
+
+        def copyTask = tasks.register("copy${variantCap}ApkToDropDir", Copy) {
+            group = "distribution"
+            description = "Copies the ${variant.name} APK(s) into build/apk/."
+            from(variant.artifacts.get(SingleArtifact.APK.INSTANCE)) {
+                include "*.apk"
+                rename { String src ->
+                    def unsigned = src.endsWith("-unsigned.apk") ? "-unsigned" : ""
+                    def out = new StringBuilder(apkAppName)
+                    if (flavor) out.append('-').append(flavor)
+                    out.append("_v").append(versionName)
+                    out.append('-').append(buildType)
+                    out.append(unsigned).append(".apk")
+                    out.toString()
+                }
+            }
+            into apkDropDir
+        }
+
+        tasks.matching { it.name == "assemble${variantCap}" }.configureEach {
+            finalizedBy(copyTask)
+        }
     }
 }
 

@@ -1,7 +1,7 @@
 {
   "name": "lunasea",
   "description": "Self-Hosted Controller",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "private": true,
   "scripts": {
     "build:android": "flutter clean && flutter build apk --release",
@@ -36,7 +36,7 @@
     "release:flavor:beta": "cross-env HUSKY=0 git commit --no-verify --allow-empty -m \"release(testflight): beta\" -m \"[skip ci]\"",
     "release:prepare": "npm run cocoapods:nuke && npm run generate && npm run fastlane:update",
     "version": "npm run version:pubspec && npm run version:snapcraft",
-    "version:pubspec": "yq -i \".version = \\\"$(jq -r .version package.json)+1\\\"\" pubspec.yaml",
+    "version:pubspec": "yq -i \".version = \\\"$(jq -r .version package.json)\\\"\" pubspec.yaml",
     "version:snapcraft": "yq -i \".version = \\\"$(jq -r .version package.json)\\\"\" snap/snapcraft.yaml"
   },
   "devDependencies": {

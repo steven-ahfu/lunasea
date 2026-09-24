@@ -122,25 +122,40 @@ jobs:
             --dart-define=BUILD=${{ github.run_number }} \
             --build-number=${{ github.run_number }}
 
-      - name: Compute APK name
+      - name: Collect APK
         id: apk
         run: |
-          # The version field in pubspec.yaml has the shape `X.Y.Z+N`, take
-          # the X.Y.Z part. On a release-triggered run, prefer the tag name.
-          VERSION="${{ github.event.release.tag_name }}"
-          if [[ -z "${VERSION}" ]]; then
-            VERSION=$(grep -E '^version:' pubspec.yaml | awk '{print $2}' | cut -d'+' -f1)
+          set -euo pipefail
+          # Gradle's drop dir (see android/app/build.gradle) already emits the
+          # canonical name, byte-for-byte identical to a local build:
+          #   LunaSea_v<version>-release.apk
+          shopt -s nullglob
+          APKS=(build/apk/LunaSea_v*-release.apk)
+          if [[ ${#APKS[@]} -ne 1 ]]; then
+            echo "::error::Expected exactly 1 release APK in build/apk, found ${#APKS[@]}"
+            ls -la build/apk || true
+            exit 1
           fi
-          # Strip leading `v` if present.
-          VERSION="${VERSION#v}"
-          SUFFIX="${{ steps.keystore.outputs.kind == 'ephemeral' && '-unsigned' || '' }}"
-          NAME="lunasea-${VERSION}-android${SUFFIX}.apk"
+          SRC="${APKS[0]}"
+          NAME="$(basename "$SRC")"
+          # An ephemeral keystore is not the real signing key - say so in the name.
+          if [[ "${{ steps.keystore.outputs.kind }}" == "ephemeral" ]]; then
+            NAME="${NAME%.apk}-unsigned.apk"
+          fi
           mkdir -p ../output
-          cp build/app/outputs/flutter-apk/app-release.apk "../output/${NAME}"
+          cp "$SRC" "../output/${NAME}"
           echo "name=${NAME}" >> "$GITHUB_OUTPUT"
           echo "path=output/${NAME}" >> "$GITHUB_OUTPUT"
-          ls -lh "../output/"
+          ls -lh ../output/
         working-directory: lunasea
+
+      - name: Verify APK signature
+        if: steps.keystore.outputs.kind != 'ephemeral'
+        run: |
+          set -euo pipefail
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -name apksigner | sort -V | tail -1)"
+          "$APKSIGNER" verify --verbose --print-certs "${{ steps.apk.outputs.path }}"
+        working-directory: .
 
       - name: Upload APK as workflow artifact
         uses: actions/upload-artifact@v4
