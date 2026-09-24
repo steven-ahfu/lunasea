@@ -1,0 +1,182 @@
+name: Auto Release (APK)
+
+# Fires on every push to main (the working branch) that touches the version.
+# The version is single-sourced as `version:` in lunasea/pubspec.yaml
+# (`X.Y.Z+N`; only X.Y.Z is used). It reads the version, and if a release for
+# it doesn't already exist it builds the signed release APK and publishes a
+# GitHub Release tagged v<version>. If the release already exists it's a
+# no-op — so it only ever publishes a NEW version once.
+#
+# Can also be run manually from the Actions tab (make sure the branch selector
+# is set to `main`). Tick "force" to rebuild and overwrite the APK on an
+# existing v<version> release — use this to regenerate an artifact that built
+# wrong.
+#
+# Notes:
+# - Releases created here use GITHUB_TOKEN, which by design does NOT trigger
+#   other workflows' `release: published` events, so build-android.yml (and the
+#   other build-*.yml) won't also run for these releases.
+# - Unlike build-android.yml, this refuses to publish without the real signing
+#   secrets: an APK signed with a throwaway key can't update an existing install.
+# - versionCode is derived from the version (X*10000 + Y*100 + Z), not the run
+#   number, so it always increases with the version and is identical when a
+#   release is force-rebuilt. It requires Y and Z to stay below 100.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - lunasea/pubspec.yaml
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "Rebuild and overwrite the release even if v<version> already exists"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: auto-release
+  cancel-in-progress: false
+
+# Opt JavaScript-based actions into the Node.js 24 runtime (matches the other
+# workflows in this repo).
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      should_release: ${{ steps.v.outputs.should_release }}
+      version: ${{ steps.v.outputs.version }}
+      version_code: ${{ steps.v.outputs.version_code }}
+      tag: ${{ steps.v.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: v
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FORCE: ${{ github.event.inputs.force }}
+        run: |
+          set -euo pipefail
+          version=$(sed -nE 's/^version:[[:space:]]*"?([0-9]+\.[0-9]+\.[0-9]+).*/\1/p' lunasea/pubspec.yaml | head -1)
+          if [ -z "$version" ]; then
+            echo "::error::Could not read an X.Y.Z version from lunasea/pubspec.yaml"
+            exit 1
+          fi
+          IFS=. read -r major minor patch <<< "$version"
+          if [ "$minor" -ge 100 ] || [ "$patch" -ge 100 ]; then
+            echo "::error::Minor and patch must be < 100 for the versionCode scheme (got $version)"
+            exit 1
+          fi
+          version_code=$(( 10#$major * 10000 + 10#$minor * 100 + 10#$patch ))
+          tag="v$version"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "version_code=$version_code" >> "$GITHUB_OUTPUT"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          if [ "$FORCE" = "true" ]; then
+            echo "should_release=true" >> "$GITHUB_OUTPUT"
+            echo "Force requested — will rebuild and overwrite release $tag."
+          elif gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "should_release=false" >> "$GITHUB_OUTPUT"
+            echo "Release $tag already exists — nothing to do."
+          else
+            echo "should_release=true" >> "$GITHUB_OUTPUT"
+            echo "Will publish release $tag (versionCode $version_code)."
+          fi
+
+  release:
+    needs: check
+    if: ${{ needs.check.outputs.should_release == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: lunasea
+    env:
+      FLUTTER_VERSION: 3.41.9
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Resolve dependencies
+        run: flutter pub get
+
+      # Generated files (*.g.dart, lib/system/environment.dart) are gitignored.
+      # FLAVOR/COMMIT/BUILD are read from the environment at generation time.
+      - name: Generate code (environment, localization, build_runner)
+        env:
+          FLAVOR: stable
+          COMMIT: ${{ github.sha }}
+          BUILD: ${{ needs.check.outputs.version_code }}
+        run: |
+          dart run environment_config:generate
+          dart scripts/generate_localization.dart
+          dart run build_runner build
+
+      - name: Decode keystore
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          for name in ANDROID_KEYSTORE_BASE64 ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Secret $name is not set; refusing to publish an APK signed with a throwaway key."
+              exit 1
+            fi
+          done
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.keystore"
+          # android/app/build.gradle reads android/key.properties; storeFile is
+          # resolved relative to android/app, so use an absolute path.
+          cat > android/key.properties <<EOF
+          storePassword=${ANDROID_KEYSTORE_PASSWORD}
+          keyPassword=${ANDROID_KEY_PASSWORD}
+          keyAlias=${ANDROID_KEY_ALIAS}
+          storeFile=${RUNNER_TEMP}/release.keystore
+          EOF
+
+      - name: Build release APK
+        run: |
+          flutter build apk --release \
+            --build-name=${{ needs.check.outputs.version }} \
+            --build-number=${{ needs.check.outputs.version_code }}
+          mkdir -p ../output
+          cp build/app/outputs/flutter-apk/app-release.apk \
+            "../output/lunasea-${{ needs.check.outputs.version }}-android.apk"
+          ls -lh ../output
+
+      - name: Publish GitHub Release
+        working-directory: .
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          tag="${{ needs.check.outputs.tag }}"
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            # Release already exists (force rebuild): replace its APK asset(s) in place.
+            echo "Overwriting APK asset(s) on existing release $tag."
+            gh release upload "$tag" --repo "$GITHUB_REPOSITORY" --clobber output/*.apk
+          else
+            gh release create "$tag" \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "LunaSea ${{ needs.check.outputs.version }}" \
+              --target "${{ github.sha }}" \
+              --generate-notes \
+              output/*.apk
+          fi

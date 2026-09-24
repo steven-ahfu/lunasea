@@ -8,3 +8,6 @@
 *.keystore
 key.properties
 .remember
+
+.env
+.agents/

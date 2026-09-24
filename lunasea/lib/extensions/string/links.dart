@@ -18,9 +18,18 @@ extension StringAsLinksExtension on String {
     );
   }
 
+  /// Opens the link in a native app that claims it (e.g. the IMDb app), and
+  /// otherwise falls back to the platform default (Custom Tab / in-app
+  /// browser on Android).
+  ///
+  /// On Android, `externalNonBrowserApplication` *throws* when no non-browser
+  /// app handles the URL, which is always the case for self-hosted URLs, so
+  /// the universal attempt must not short-circuit the fallback.
   Future<void> openLink() async {
     try {
       if (await _launchUniversal(this)) return;
+    } catch (_) {}
+    try {
       await _launchDefault(this);
     } catch (error, stack) {
       LunaLogger().error(
