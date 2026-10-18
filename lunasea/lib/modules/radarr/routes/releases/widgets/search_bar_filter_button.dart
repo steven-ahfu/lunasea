@@ -1,15 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:lunasea/core.dart';
-import 'package:lunasea/extensions/scroll_controller.dart';
 import 'package:lunasea/modules/radarr.dart';
+import 'package:lunasea/widgets/ui/release_filters_button.dart';
 
 class RadarrReleasesAppBarFilterButton extends StatefulWidget {
   final ScrollController controller;
 
-  const RadarrReleasesAppBarFilterButton({
-    Key? key,
-    required this.controller,
-  }) : super(key: key);
+  const RadarrReleasesAppBarFilterButton({Key? key, required this.controller})
+    : super(key: key);
 
   @override
   State<RadarrReleasesAppBarFilterButton> createState() => _State();
@@ -18,39 +16,25 @@ class RadarrReleasesAppBarFilterButton extends StatefulWidget {
 class _State extends State<RadarrReleasesAppBarFilterButton> {
   @override
   Widget build(BuildContext context) {
-    return LunaCard(
-      context: context,
-      child: Consumer<RadarrReleasesState>(
-        builder: (context, state, _) =>
-            LunaPopupMenuButton<RadarrReleasesFilter>(
-          tooltip: 'Filter Releases',
-          icon: Icons.filter_list_rounded,
-          onSelected: (result) {
-            state.filterType = result;
-            widget.controller.animateToStart();
-          },
-          itemBuilder: (context) =>
-              List<PopupMenuEntry<RadarrReleasesFilter>>.generate(
-            RadarrReleasesFilter.values.length,
-            (index) => PopupMenuItem<RadarrReleasesFilter>(
-              value: RadarrReleasesFilter.values[index],
-              child: Text(
-                RadarrReleasesFilter.values[index].readable,
-                style: TextStyle(
-                  fontSize: LunaUI.FONT_SIZE_H3,
-                  color: state.filterType == RadarrReleasesFilter.values[index]
-                      ? LunaColours.accent
-                      : Colors.white,
-                ),
-              ),
+    return Consumer<RadarrReleasesState>(
+      builder: (context, state, _) =>
+          LunaReleaseFiltersButton<RadarrReleasesFilter>(
+            controller: widget.controller,
+            tooltip: 'lunasea.ReleaseFilterTitle'.tr(),
+            approvalOptions: {
+              for (final filter in RadarrReleasesFilter.values)
+                filter: filter.readable,
+            },
+            approval: state.filterType,
+            allApproval: RadarrReleasesFilter.ALL,
+            onApprovalChanged: (value) => state.filterType = value,
+            filters: state.filters,
+            onFiltersChanged: (value) => state.filters = value,
+            releases: state.releases?.then(
+              (releases) =>
+                  releases.map((release) => release.lunaFilterData).toList(),
             ),
           ),
-        ),
-      ),
-      height: LunaTextInputBar.defaultHeight,
-      width: LunaTextInputBar.defaultHeight,
-      margin: const EdgeInsets.fromLTRB(0.0, 0.0, 12.0, 14.0),
-      color: Theme.of(context).canvasColor,
     );
   }
 }

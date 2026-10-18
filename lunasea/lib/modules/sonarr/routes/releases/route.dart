@@ -46,9 +46,7 @@ class _State extends State<ReleasesRoute> with LunaScrollControllerMixin {
       title: 'sonarr.Releases'.tr(),
       scrollControllers: [scrollController],
       bottom: SonarrReleasesSearchBar(scrollController: scrollController),
-      actions: const [
-        DownloadClientButton(),
-      ],
+      actions: const [DownloadClientButton()],
     );
   }
 
@@ -101,7 +99,9 @@ class _State extends State<ReleasesRoute> with LunaScrollControllerMixin {
           itemCount: _processed.isEmpty ? 1 : _processed.length,
           itemBuilder: (context, index) {
             if (_processed.isEmpty) {
-              return LunaMessage.inList(text: 'sonarr.NoReleasesFound'.tr());
+              return LunaMessage.inList(
+                text: 'lunasea.ReleaseFilterNoMatches'.tr(),
+              );
             }
             return SonarrReleasesTile(release: _processed[index]);
           },
@@ -115,15 +115,16 @@ class _State extends State<ReleasesRoute> with LunaScrollControllerMixin {
     SonarrReleasesState state,
   ) {
     if (releases.isEmpty) return releases;
-    List<SonarrRelease> filtered = releases.where(
-      (release) {
-        String _query = state.searchQuery;
-        if (_query.isNotEmpty) {
-          return release.title!.toLowerCase().contains(_query.toLowerCase());
-        }
-        return true;
-      },
-    ).toList();
+    List<SonarrRelease> filtered = releases.where((release) {
+      if (!state.filters.matches(release.lunaFilterData)) return false;
+      String _query = state.searchQuery;
+      if (_query.isNotEmpty) {
+        return (release.title ?? '').toLowerCase().contains(
+          _query.toLowerCase(),
+        );
+      }
+      return true;
+    }).toList();
     filtered = state.filterType.filter(filtered);
     filtered = state.sortType.sort(filtered, state.sortAscending);
     return filtered;

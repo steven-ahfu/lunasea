@@ -7,10 +7,7 @@ import 'package:lunasea/widgets/sheets/download_client/button.dart';
 class MovieReleasesRoute extends StatefulWidget {
   final int movieId;
 
-  const MovieReleasesRoute({
-    Key? key,
-    required this.movieId,
-  }) : super(key: key);
+  const MovieReleasesRoute({Key? key, required this.movieId}) : super(key: key);
 
   @override
   State<StatefulWidget> createState() => _State();
@@ -24,10 +21,7 @@ class _State extends State<MovieReleasesRoute> with LunaScrollControllerMixin {
   @override
   Widget build(BuildContext context) {
     if (widget.movieId <= 0) {
-      return InvalidRoutePage(
-        title: 'Releases',
-        message: 'Movie Not Found',
-      );
+      return InvalidRoutePage(title: 'Releases', message: 'Movie Not Found');
     }
     return ChangeNotifierProvider(
       create: (context) => RadarrReleasesState(context, widget.movieId),
@@ -44,9 +38,7 @@ class _State extends State<MovieReleasesRoute> with LunaScrollControllerMixin {
       title: 'Releases',
       scrollControllers: [scrollController],
       bottom: RadarrReleasesSearchBar(scrollController: scrollController),
-      actions: const [
-        DownloadClientButton(),
-      ],
+      actions: const [DownloadClientButton()],
     );
   }
 
@@ -99,7 +91,9 @@ class _State extends State<MovieReleasesRoute> with LunaScrollControllerMixin {
           itemCount: _processed.isEmpty ? 1 : _processed.length,
           itemBuilder: (context, index) {
             if (_processed.isEmpty) {
-              return LunaMessage.inList(text: 'No Releases Found');
+              return LunaMessage.inList(
+                text: 'lunasea.ReleaseFilterNoMatches'.tr(),
+              );
             }
             return RadarrReleasesTile(release: _processed[index]);
           },
@@ -113,15 +107,16 @@ class _State extends State<MovieReleasesRoute> with LunaScrollControllerMixin {
     RadarrReleasesState state,
   ) {
     if (releases.isEmpty) return releases;
-    List<RadarrRelease> filtered = releases.where(
-      (release) {
-        String _query = state.searchQuery;
-        if (_query.isNotEmpty) {
-          return release.title!.toLowerCase().contains(_query.toLowerCase());
-        }
-        return true;
-      },
-    ).toList();
+    List<RadarrRelease> filtered = releases.where((release) {
+      if (!state.filters.matches(release.lunaFilterData)) return false;
+      String _query = state.searchQuery;
+      if (_query.isNotEmpty) {
+        return (release.title ?? '').toLowerCase().contains(
+          _query.toLowerCase(),
+        );
+      }
+      return true;
+    }).toList();
     filtered = state.filterType.filter(filtered);
     filtered = state.sortType.sort(filtered, state.sortAscending);
     return filtered;

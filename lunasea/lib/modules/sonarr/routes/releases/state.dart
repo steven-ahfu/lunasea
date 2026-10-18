@@ -1,8 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:lunasea/core.dart';
 import 'package:lunasea/modules/sonarr.dart';
+import 'package:lunasea/types/release_filters.dart';
 
 class SonarrReleasesState extends ChangeNotifier {
+  LunaReleaseFilters _filters = LunaReleaseFilters();
+  LunaReleaseFilters get filters => _filters;
+  set filters(LunaReleaseFilters filters) {
+    _filters = filters;
+    notifyListeners();
+  }
+
   final int? seriesId;
   final int? seasonNumber;
   final int? episodeId;
@@ -21,8 +29,9 @@ class SonarrReleasesState extends ChangeNotifier {
   void refreshReleases(BuildContext context) {
     if (context.read<SonarrState>().enabled) {
       if (episodeId != null) {
-        _releases =
-            context.read<SonarrState>().api!.release.get(episodeId: episodeId!);
+        _releases = context.read<SonarrState>().api!.release.get(
+          episodeId: episodeId!,
+        );
       } else if (seriesId != null && seasonNumber != null) {
         _releases = context
             .read<SonarrState>()
@@ -32,7 +41,8 @@ class SonarrReleasesState extends ChangeNotifier {
             .then((releases) => releases.where((r) => r.fullSeason!).toList());
       } else {
         throw Exception(
-            'Must supply either episodeId or seriesId and seasonNumber');
+          'Must supply either episodeId or seriesId and seasonNumber',
+        );
       }
     }
     notifyListeners();
@@ -45,24 +55,24 @@ class SonarrReleasesState extends ChangeNotifier {
     notifyListeners();
   }
 
-  SonarrReleasesFilter? _filterType =
-      SonarrDatabase.DEFAULT_FILTERING_RELEASES.read();
+  SonarrReleasesFilter? _filterType = SonarrDatabase.DEFAULT_FILTERING_RELEASES
+      .read();
   SonarrReleasesFilter get filterType => _filterType!;
   set filterType(SonarrReleasesFilter filterType) {
     _filterType = filterType;
     notifyListeners();
   }
 
-  SonarrReleasesSorting? _sortType =
-      SonarrDatabase.DEFAULT_SORTING_RELEASES.read();
+  SonarrReleasesSorting? _sortType = SonarrDatabase.DEFAULT_SORTING_RELEASES
+      .read();
   SonarrReleasesSorting get sortType => _sortType!;
   set sortType(SonarrReleasesSorting sortType) {
     _sortType = sortType;
     notifyListeners();
   }
 
-  bool? _sortAscending =
-      SonarrDatabase.DEFAULT_SORTING_RELEASES_ASCENDING.read();
+  bool? _sortAscending = SonarrDatabase.DEFAULT_SORTING_RELEASES_ASCENDING
+      .read();
   bool get sortAscending => _sortAscending!;
   set sortAscending(bool sortAscending) {
     _sortAscending = sortAscending;

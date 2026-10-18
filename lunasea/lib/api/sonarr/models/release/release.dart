@@ -54,6 +54,12 @@ class SonarrRelease {
   @JsonKey(name: 'language')
   SonarrLanguageProfile? language;
 
+  @JsonKey(name: 'languages')
+  List<SonarrEpisodeFileLanguage>? languages;
+
+  @JsonKey(name: 'customFormats')
+  List<SonarrReleaseCustomFormat>? customFormats;
+
   @JsonKey(name: 'languageWeight')
   int? languageWeight;
 
@@ -163,6 +169,8 @@ class SonarrRelease {
     this.sceneSource,
     this.seasonNumber,
     this.language,
+    this.languages,
+    this.customFormats,
     this.languageWeight,
     this.seriesTitle,
     this.episodeNumbers,
@@ -200,4 +208,20 @@ class SonarrRelease {
       _$SonarrReleaseFromJson(json);
 
   Map<String, dynamic> toJson() => _$SonarrReleaseToJson(this);
+}
+
+@JsonSerializable(explicitToJson: true, includeIfNull: false)
+class SonarrReleaseCustomFormat {
+  @JsonKey(name: 'id')
+  int? id;
+
+  @JsonKey(name: 'name')
+  String? name;
+
+  SonarrReleaseCustomFormat({this.id, this.name});
+
+  factory SonarrReleaseCustomFormat.fromJson(Map<String, dynamic> json) =>
+      _$SonarrReleaseCustomFormatFromJson(json);
+
+  Map<String, dynamic> toJson() => _$SonarrReleaseCustomFormatToJson(this);
 }
