@@ -44,6 +44,8 @@ import 'package:lunasea/modules/settings/routes/configuration_tautulli/pages/con
 import 'package:lunasea/modules/settings/routes/configuration_tautulli/pages/default_pages.dart';
 import 'package:lunasea/modules/settings/routes/configuration_tautulli/pages/headers.dart';
 import 'package:lunasea/modules/settings/routes/configuration_tautulli/route.dart';
+import 'package:lunasea/modules/settings/routes/configuration_chaptarr/route.dart';
+import 'package:lunasea/modules/settings/core/pages/headers.dart';
 import 'package:lunasea/modules/settings/routes/configuration_tracearr/route.dart';
 import 'package:lunasea/modules/settings/routes/configuration_wake_on_lan/route.dart';
 import 'package:lunasea/modules/settings/routes/profiles/route.dart';
@@ -99,6 +101,8 @@ enum SettingsRoutes with LunaRoutesMixin {
   CONFIGURATION_TAUTULLI_CONNECTION_DETAILS('connection_details'),
   CONFIGURATION_TAUTULLI_CONNECTION_DETAILS_HEADERS('headers'),
   CONFIGURATION_TAUTULLI_DEFAULT_PAGES('default_pages'),
+  CONFIGURATION_CHAPTARR('chaptarr'),
+  CONFIGURATION_CHAPTARR_HEADERS('headers'),
   CONFIGURATION_TRACEARR('tracearr'),
   CONFIGURATION_WAKE_ON_LAN('wake_on_lan'),
   PROFILES('profiles'),
@@ -234,6 +238,10 @@ enum SettingsRoutes with LunaRoutesMixin {
         );
       case SettingsRoutes.CONFIGURATION_TAUTULLI_DEFAULT_PAGES:
         return route(widget: const ConfigurationTautulliDefaultPagesRoute());
+      case SettingsRoutes.CONFIGURATION_CHAPTARR:
+        return route(widget: const ConfigurationChaptarrRoute());
+      case SettingsRoutes.CONFIGURATION_CHAPTARR_HEADERS:
+        return route(widget: const SettingsHeaderRoute(module: LunaModule.CHAPTARR));
       case SettingsRoutes.CONFIGURATION_TRACEARR:
         return route(widget: const ConfigurationTracearrRoute());
       case SettingsRoutes.CONFIGURATION_WAKE_ON_LAN:
@@ -276,6 +284,7 @@ enum SettingsRoutes with LunaRoutesMixin {
           SettingsRoutes.CONFIGURATION_SEARCH.routes,
           SettingsRoutes.CONFIGURATION_SONARR.routes,
           SettingsRoutes.CONFIGURATION_TAUTULLI.routes,
+          SettingsRoutes.CONFIGURATION_CHAPTARR.routes,
           SettingsRoutes.CONFIGURATION_TRACEARR.routes,
           SettingsRoutes.CONFIGURATION_WAKE_ON_LAN.routes,
         ];
@@ -284,6 +293,8 @@ enum SettingsRoutes with LunaRoutesMixin {
           SettingsRoutes.CONFIGURATION_DASHBOARD_CALENDAR.routes,
           SettingsRoutes.CONFIGURATION_DASHBOARD_DEFAULT_PAGES.routes,
         ];
+      case SettingsRoutes.CONFIGURATION_CHAPTARR:
+        return [SettingsRoutes.CONFIGURATION_CHAPTARR_HEADERS.routes];
       case SettingsRoutes.CONFIGURATION_LIDARR:
         return [
           SettingsRoutes.CONFIGURATION_LIDARR_CONNECTION_DETAILS.routes,

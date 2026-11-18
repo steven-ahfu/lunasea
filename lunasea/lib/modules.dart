@@ -8,6 +8,7 @@ import 'package:lunasea/router/routes.dart';
 import 'package:lunasea/router/routes/settings.dart';
 import 'package:lunasea/modules/search.dart';
 import 'package:lunasea/modules/settings.dart';
+import 'package:lunasea/modules/chaptarr.dart';
 import 'package:lunasea/modules/lidarr.dart';
 import 'package:lunasea/modules/radarr.dart';
 import 'package:lunasea/modules/sonarr.dart';
@@ -22,6 +23,7 @@ part 'modules.g.dart';
 
 const MODULE_DASHBOARD_KEY = 'dashboard';
 const MODULE_EXTERNAL_MODULES_KEY = 'external_modules';
+const MODULE_CHAPTARR_KEY = 'chaptarr';
 const MODULE_LIDARR_KEY = 'lidarr';
 const MODULE_NZBGET_KEY = 'nzbget';
 const MODULE_OVERSEERR_KEY = 'overseerr';
@@ -40,6 +42,8 @@ enum LunaModule {
   DASHBOARD(MODULE_DASHBOARD_KEY),
   @HiveField(11)
   EXTERNAL_MODULES(MODULE_EXTERNAL_MODULES_KEY),
+  @HiveField(13)
+  CHAPTARR(MODULE_CHAPTARR_KEY),
   @HiveField(1)
   LIDARR(MODULE_LIDARR_KEY),
   @HiveField(2)
@@ -70,6 +74,8 @@ enum LunaModule {
     switch (key) {
       case MODULE_DASHBOARD_KEY:
         return LunaModule.DASHBOARD;
+      case MODULE_CHAPTARR_KEY:
+        return LunaModule.CHAPTARR;
       case MODULE_LIDARR_KEY:
         return LunaModule.LIDARR;
       case MODULE_NZBGET_KEY:
@@ -141,6 +147,8 @@ extension LunaModuleEnablementExtension on LunaModule {
         return LunaProfile.current.sonarrEnabled;
       case LunaModule.TAUTULLI:
         return LunaProfile.current.tautulliEnabled;
+      case LunaModule.CHAPTARR:
+        return LunaProfile.current.chaptarrEnabled;
       case LunaModule.TRACEARR:
         return LunaProfile.current.tracearrEnabled;
       case LunaModule.WAKE_ON_LAN:
@@ -172,6 +180,8 @@ extension LunaModuleMetadataExtension on LunaModule {
         return 'Sonarr';
       case LunaModule.TAUTULLI:
         return 'Tautulli';
+      case LunaModule.CHAPTARR:
+        return 'Chaptarr';
       case LunaModule.TRACEARR:
         return 'Tracearr';
       case LunaModule.OVERSEERR:
@@ -203,6 +213,8 @@ extension LunaModuleMetadataExtension on LunaModule {
         return LunaIcons.SONARR;
       case LunaModule.TAUTULLI:
         return LunaIcons.TAUTULLI;
+      case LunaModule.CHAPTARR:
+        return Icons.menu_book_rounded;
       case LunaModule.TRACEARR:
         return Icons.travel_explore_rounded;
       case LunaModule.OVERSEERR:
@@ -234,6 +246,8 @@ extension LunaModuleMetadataExtension on LunaModule {
         return const Color(0xFF3FC6F4);
       case LunaModule.TAUTULLI:
         return const Color(0xFFDBA23A);
+      case LunaModule.CHAPTARR:
+        return const Color(0xFFCE9468);
       case LunaModule.TRACEARR:
         return const Color(0xFF14B8A6);
       case LunaModule.OVERSEERR:
@@ -265,6 +279,8 @@ extension LunaModuleMetadataExtension on LunaModule {
         return 'https://sonarr.tv';
       case LunaModule.TAUTULLI:
         return 'https://tautulli.com';
+      case LunaModule.CHAPTARR:
+        return 'https://chaptarr.com';
       case LunaModule.TRACEARR:
         return 'https://tracearr.com';
       case LunaModule.OVERSEERR:
@@ -296,6 +312,8 @@ extension LunaModuleMetadataExtension on LunaModule {
         return 'https://github.com/Sonarr/Sonarr';
       case LunaModule.TAUTULLI:
         return 'https://github.com/Tautulli/Tautulli';
+      case LunaModule.CHAPTARR:
+        return 'https://github.com/Chaptarr/chaptarr';
       case LunaModule.TRACEARR:
         return 'https://github.com/connorgallopo/Tracearr';
       case LunaModule.OVERSEERR:
@@ -327,6 +345,8 @@ extension LunaModuleMetadataExtension on LunaModule {
         return 'Manage Television Series';
       case LunaModule.TAUTULLI:
         return 'View Plex Activity';
+      case LunaModule.CHAPTARR:
+        return 'chaptarr.Description'.tr();
       case LunaModule.TRACEARR:
         return 'Monitor Plex, Jellyfin & Emby';
       case LunaModule.OVERSEERR:
@@ -358,6 +378,8 @@ extension LunaModuleMetadataExtension on LunaModule {
         return 'Sonarr is a PVR for Usenet and BitTorrent users. It can monitor multiple RSS feeds for new episodes of your favorite shows and will grab, sort and rename them. It can also be configured to automatically upgrade the quality of files already downloaded when a better quality format becomes available.';
       case LunaModule.TAUTULLI:
         return 'Tautulli is an application that you can run alongside your Plex Media Server to monitor activity and track various statistics. Most importantly, these statistics include what has been watched, who watched it, when and where they watched it, and how it was watched.';
+      case LunaModule.CHAPTARR:
+        return 'chaptarr.Information'.tr();
       case LunaModule.TRACEARR:
         return 'Tracearr is a unified monitoring platform for Plex, Jellyfin and Emby servers. Track real-time streams, analyze playback, view watch history, and detect account sharing across all your media servers from a single dashboard.';
       case LunaModule.OVERSEERR:
@@ -391,6 +413,8 @@ extension LunaModuleRoutingExtension on LunaModule {
         return LunaRoutes.sonarr.root.path;
       case LunaModule.TAUTULLI:
         return LunaRoutes.tautulli.root.path;
+      case LunaModule.CHAPTARR:
+        return LunaRoutes.chaptarr.root.path;
       case LunaModule.TRACEARR:
         return LunaRoutes.tracearr.root.path;
       case LunaModule.OVERSEERR:
@@ -424,6 +448,8 @@ extension LunaModuleRoutingExtension on LunaModule {
         return SettingsRoutes.CONFIGURATION_SONARR;
       case LunaModule.TAUTULLI:
         return SettingsRoutes.CONFIGURATION_TAUTULLI;
+      case LunaModule.CHAPTARR:
+        return SettingsRoutes.CONFIGURATION_CHAPTARR;
       case LunaModule.TRACEARR:
         return SettingsRoutes.CONFIGURATION_TRACEARR;
       case LunaModule.WAKE_ON_LAN:
@@ -523,6 +549,8 @@ extension LunaModuleExtension on LunaModule {
         return null;
       case LunaModule.TAUTULLI:
         return context.read<TautulliState>();
+      case LunaModule.CHAPTARR:
+        return context.read<ChaptarrState>();
       case LunaModule.TRACEARR:
         return context.read<TracearrState>();
       case LunaModule.EXTERNAL_MODULES:

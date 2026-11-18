@@ -2,6 +2,7 @@
 
 LunaSea is a fully featured, open source self-hosted controller focused on giving you a seamless experience between all of your self-hosted media software remotely on your devices. LunaSea currently supports:
 
+- [Chaptarr](https://github.com/Chaptarr/chaptarr) for ebook and audiobook libraries
 - [Lidarr](https://github.com/lidarr/lidarr)
 - [Radarr](https://github.com/radarr/radarr)
 - [Sonarr](https://github.com/sonarr/sonarr)
