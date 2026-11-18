@@ -3,6 +3,8 @@
 > Self-hosted controller for your media server stack. This mono-repository
 > hosts every component of the LunaSea project.
 
+LunaSea supports Sonarr for TV shows, Radarr for movies, Lidarr for music, and **Chaptarr for ebooks and audiobooks**. With Chaptarr, you can browse both formats, add and monitor books, search for releases, and check your download queue and history. [Chaptarr setup guide](docs/modules/chaptarr.md)
+
 ## Components
 
 | Path | What it is |
