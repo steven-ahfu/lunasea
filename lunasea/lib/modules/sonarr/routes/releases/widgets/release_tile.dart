@@ -7,10 +7,10 @@ import 'package:lunasea/modules/sonarr.dart';
 class SonarrReleasesTile extends StatefulWidget {
   final SonarrRelease release;
 
-  const SonarrReleasesTile({
+  SonarrReleasesTile({
     required this.release,
     Key? key,
-  }) : super(key: key);
+  }) : super(key: key ?? ObjectKey(release));
 
   @override
   State<StatefulWidget> createState() => _State();
@@ -104,6 +104,12 @@ class _State extends State<SonarrReleasesTile> {
           text: widget.release.lunaPreferredWordScore()!,
           backgroundColor: LunaColours.purple,
         ),
+      for (final format in widget.release.customFormats ?? const <SonarrReleaseCustomFormat>[])
+        if (format.name != null)
+          LunaHighlightedNode(
+            text: format.name!,
+            backgroundColor: LunaColours.blueGrey,
+          ),
     ];
   }
 

@@ -717,7 +717,7 @@ class LidarrAPI {
         entries.add(LidarrReleaseData(
           title: entry['title'] ?? 'Unknown Title',
           guid: entry['guid'] ?? '',
-          quality: entry['quality']['quality']['name'] ?? 'Unknown',
+          quality: entry['quality']?['quality']?['name'] ?? 'Unknown',
           protocol: entry['protocol'] ?? 'Unknown Protocol',
           indexer: entry['indexer'] ?? 'Unknown Indexer',
           infoUrl: entry['infoUrl'] ?? '',

@@ -72,7 +72,7 @@ class LunaReleaseFiltersButton<T extends Object> extends StatelessWidget {
       if (!context.mounted) return;
       final selected = await showDialog<Set<LunaReleaseFilterOption>>(
         context: context,
-        builder: (_) => _ReleaseFilterDialog(
+        builder: (_) => LunaReleaseFilterDialog(
           title: _label(result),
           options: filters.optionsFor(result, data),
           selected: filters.selectedFor(result),
@@ -181,22 +181,23 @@ String _optionLabel(LunaReleaseFilterOption option) {
   return option.label.isEmpty ? 'lunasea.Unknown'.tr() : option.label;
 }
 
-class _ReleaseFilterDialog extends StatefulWidget {
+class LunaReleaseFilterDialog extends StatefulWidget {
   final String title;
   final List<LunaReleaseFilterOption> options;
   final Set<LunaReleaseFilterOption> selected;
 
-  const _ReleaseFilterDialog({
+  const LunaReleaseFilterDialog({
+    super.key,
     required this.title,
     required this.options,
     required this.selected,
   });
 
   @override
-  State<_ReleaseFilterDialog> createState() => _ReleaseFilterDialogState();
+  State<LunaReleaseFilterDialog> createState() => _ReleaseFilterDialogState();
 }
 
-class _ReleaseFilterDialogState extends State<_ReleaseFilterDialog> {
+class _ReleaseFilterDialogState extends State<LunaReleaseFilterDialog> {
   late final Set<LunaReleaseFilterOption> _selected = {...widget.selected};
   String _query = '';
 

@@ -1,3 +1,5 @@
+import 'package:lunasea/types/release_filters.dart';
+
 class LidarrReleaseData {
   String title;
   String guid;
@@ -34,4 +36,7 @@ class LidarrReleaseData {
   bool get isTorrent {
     return protocol == 'torrent';
   }
+
+  LunaReleaseFilterData get lunaFilterData =>
+      LunaReleaseFilterData(title: title, audioQuality: quality);
 }

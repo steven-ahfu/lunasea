@@ -7,10 +7,10 @@ import 'package:lunasea/modules/radarr.dart';
 class RadarrReleasesTile extends StatefulWidget {
   final RadarrRelease release;
 
-  const RadarrReleasesTile({
+  RadarrReleasesTile({
     required this.release,
     Key? key,
-  }) : super(key: key);
+  }) : super(key: key ?? ObjectKey(release));
 
   @override
   State<StatefulWidget> createState() => _State();
@@ -84,9 +84,12 @@ class _State extends State<RadarrReleasesTile> {
           text: widget.release.lunaCustomFormatScore()!,
           backgroundColor: LunaColours.purple,
         ),
-      ...widget.release.customFormats!.map<LunaHighlightedNode>((custom) =>
+      for (final format in widget.release.customFormats ?? const <RadarrCustomFormat>[])
+        if (format.name != null)
           LunaHighlightedNode(
-              text: custom.name!, backgroundColor: LunaColours.blueGrey)),
+            text: format.name!,
+            backgroundColor: LunaColours.blueGrey,
+          ),
     ];
   }
 

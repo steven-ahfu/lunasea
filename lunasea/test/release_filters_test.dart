@@ -75,24 +75,59 @@ void main() {
   });
 
   test(
-    'languages and custom formats match any selected value in each group',
+    'matches any selected language and requires every selected custom format',
     () {
       final english = LunaReleaseFilterOption.named('English', id: 1);
       final french = LunaReleaseFilterOption.named('French', id: 2);
-      final hdr = LunaReleaseFilterOption.named('HDR', id: 10);
-      final dv = LunaReleaseFilterOption.named('DV', id: 11);
+      final x265 = LunaReleaseFilterOption.named('x265', id: 10);
+      final dv = LunaReleaseFilterOption.named('DoVi', id: 11);
       final filters = LunaReleaseFilters()
           .withSelection(LunaReleaseFilter.language, {english, french})
-          .withSelection(LunaReleaseFilter.customFormat, {hdr, dv});
+          .withSelection(LunaReleaseFilter.customFormat, {x265, dv});
       expect(
-        filters.matches(release(languages: [french], formats: [dv])),
+        filters.matches(release(languages: [french], formats: [dv, x265])),
         isTrue,
       );
+      for (final formats in [
+        [dv],
+        [x265],
+      ]) {
+        expect(
+          filters.matches(release(languages: [english], formats: formats)),
+          isFalse,
+        );
+      }
       expect(
         filters.matches(release(languages: [english], formats: [])),
         isFalse,
       );
-      expect(filters.matches(release(formats: [hdr])), isFalse);
+      expect(filters.matches(release(formats: [dv, x265])), isFalse);
+    },
+  );
+
+  test(
+    'audio tags use token boundaries, normalize aliases and keep multiple tracks',
+    () {
+      List<String> audio(String title) => release(title: title)
+          .optionsFor(LunaReleaseFilter.audioFormat)
+          .map((option) => option.label)
+          .toList();
+
+      expect(audio('Movie_TRUE-HD7.1.Atmos.AAC2.0'), [
+        'TrueHD',
+        'Atmos',
+        'AAC',
+      ]);
+      for (final alias in [
+        'DD+5.1',
+        'ddp5.1',
+        'E-AC-3',
+        'Dolby Digital Plus',
+      ]) {
+        expect(audio(alias), ['Dolby Digital Plus'], reason: alias);
+      }
+      expect(audio('DTS-HD.MA.7.1_AC3'), ['DTS-HD MA', 'Dolby Digital']);
+      expect(audio('TrueHDish.UntrueHD.Atmosphere'), ['']);
     },
   );
 

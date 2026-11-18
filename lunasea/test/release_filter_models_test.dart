@@ -9,7 +9,7 @@ import 'package:lunasea/types/release_filters.dart';
 
 void main() {
   Map<String, dynamic> modernRelease() => {
-    'title': 'Movie DUAL AUDIO',
+    'title': 'Movie DUAL AUDIO TrueHD7.1',
     'indexerId': 10,
     'indexer': 'Tracker',
     'quality': {
@@ -20,7 +20,7 @@ void main() {
       {'id': 2, 'name': 'French'},
     ],
     'customFormats': [
-      {'id': 3, 'name': 'HDR'},
+      {'id': 3, 'name': 'Atmos'},
       {'id': 4, 'name': 'Preferred group'},
     ],
   };
@@ -35,6 +35,7 @@ void main() {
       },
       LunaReleaseFilter.resolution: {LunaReleaseFilterOption.resolution(1080)},
       LunaReleaseFilter.dualAudio: {LunaReleaseFilterOption.dualAudio},
+      LunaReleaseFilter.audioFormat: {LunaReleaseFilterOption.named('TrueHD')},
       LunaReleaseFilter.language: {
         LunaReleaseFilterOption.named('French', id: 2),
       },
@@ -44,12 +45,12 @@ void main() {
     },
   );
 
-  test('Radarr JSON populates all six filters', () {
+  test('Radarr JSON populates all release filters', () {
     final release = RadarrRelease.fromJson(modernRelease());
     expect(allFilters().matches(release.lunaFilterData), isTrue);
   });
 
-  test('current Sonarr JSON populates all six filters and round-trips', () {
+  test('current Sonarr JSON populates all release filters and round-trips', () {
     final release = SonarrRelease.fromJson(modernRelease());
     expect(allFilters().matches(release.lunaFilterData), isTrue);
     final restored = SonarrRelease.fromJson(release.toJson());
@@ -57,6 +58,22 @@ void main() {
     expect(restored.languages!.length, 2);
     expect(restored.customFormats!.length, 2);
   });
+
+  test(
+    'both services detect audio from custom formats even without a release title',
+    () {
+      final json = modernRelease()..remove('title');
+      for (final data in [
+        RadarrRelease.fromJson(json).lunaFilterData,
+        SonarrRelease.fromJson(json).lunaFilterData,
+      ]) {
+        expect(data.optionsFor(LunaReleaseFilter.audioFormat), [
+          LunaReleaseFilterOption.named('Atmos'),
+        ]);
+        expect(allFilters().matches(data), isFalse);
+      }
+    },
+  );
 
   test('older Sonarr singular language remains filterable', () {
     final release = SonarrRelease.fromJson({
@@ -69,6 +86,45 @@ void main() {
     expect(filters.matches(release.lunaFilterData), isTrue);
     expect(release.toJson()['language']['name'], 'English');
     expect(release.customFormats, isNull);
+  });
+
+  test('DoVi, x265 and TrueHD must all belong to the same release', () {
+    final filters = LunaReleaseFilters()
+        .withSelection(LunaReleaseFilter.customFormat, {
+          LunaReleaseFilterOption.named('DoVi', id: 1),
+          LunaReleaseFilterOption.named('x265', id: 2),
+        })
+        .withSelection(LunaReleaseFilter.audioFormat, {
+          LunaReleaseFilterOption.named('TrueHD'),
+        });
+    final dovi = {'id': 1, 'name': 'DoVi'};
+    final x265 = {'id': 2, 'name': 'x265'};
+    final results = [
+      {
+        'title': 'Movie.DoVi.x264.TrueHD',
+        'customFormats': [dovi],
+      },
+      {
+        'title': 'Movie.x265.TrueHD',
+        'customFormats': [x265],
+      },
+      {
+        'title': 'Movie.DoVi.x265.AAC',
+        'customFormats': [dovi, x265],
+      },
+      {
+        'title': 'Movie.DoVi.x265.TrueHD',
+        'customFormats': [dovi, x265],
+      },
+    ];
+    for (final releases in [
+      results.map((r) => RadarrRelease.fromJson(r).lunaFilterData),
+      results.map((r) => SonarrRelease.fromJson(r).lunaFilterData),
+    ]) {
+      expect(releases.where(filters.matches).map((r) => r.title), [
+        'Movie.DoVi.x265.TrueHD',
+      ]);
+    }
   });
 
   test(

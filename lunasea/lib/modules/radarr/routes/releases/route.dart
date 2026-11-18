@@ -51,16 +51,17 @@ class _State extends State<MovieReleasesRoute> with LunaScrollControllerMixin {
         await context.read<RadarrReleasesState>().releases;
       },
       child: FutureBuilder(
-        future: context.read<RadarrReleasesState>().releases,
+        future: context.select((RadarrReleasesState state) => state.releases),
         builder: (context, AsyncSnapshot<List<RadarrRelease>> snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const LunaLoader();
+          }
           if (snapshot.hasError) {
-            if (snapshot.connectionState != ConnectionState.waiting) {
-              LunaLogger().error(
-                'Unable to fetch Radarr releases: ${widget.movieId}',
-                snapshot.error,
-                snapshot.stackTrace,
-              );
-            }
+            LunaLogger().error(
+              'Unable to fetch Radarr releases: ${widget.movieId}',
+              snapshot.error,
+              snapshot.stackTrace,
+            );
             return LunaMessage.error(
               onTap: () => _refreshKey.currentState!.show,
             );

@@ -59,16 +59,17 @@ class _State extends State<ReleasesRoute> with LunaScrollControllerMixin {
         await context.read<SonarrReleasesState>().releases;
       },
       child: FutureBuilder(
-        future: context.read<SonarrReleasesState>().releases,
+        future: context.select((SonarrReleasesState state) => state.releases),
         builder: (context, AsyncSnapshot<List<SonarrRelease>> snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const LunaLoader();
+          }
           if (snapshot.hasError) {
-            if (snapshot.connectionState != ConnectionState.waiting) {
-              LunaLogger().error(
-                'Unable to fetch Sonarr releases',
-                snapshot.error,
-                snapshot.stackTrace,
-              );
-            }
+            LunaLogger().error(
+              'Unable to fetch Sonarr releases',
+              snapshot.error,
+              snapshot.stackTrace,
+            );
             return LunaMessage.error(
               onTap: () => _refreshKey.currentState!.show,
             );
