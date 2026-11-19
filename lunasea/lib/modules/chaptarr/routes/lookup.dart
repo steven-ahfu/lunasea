@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lunasea/core.dart';
 import 'package:lunasea/modules/chaptarr.dart';
+import 'package:lunasea/modules/chaptarr/routes/book_tile.dart';
 
 class ChaptarrLookup extends StatefulWidget {
   final ChaptarrAPI api;
@@ -14,187 +15,142 @@ class ChaptarrLookup extends StatefulWidget {
   State<ChaptarrLookup> createState() => _LookupState();
 }
 
-class _LookupState extends State<ChaptarrLookup> {
+class _LookupState extends State<ChaptarrLookup>
+    with LunaScrollControllerMixin {
   final scaffold = GlobalKey<ScaffoldState>();
   final query = TextEditingController();
   late ChaptarrFormat format = widget.initialFormat;
+  Timer? debounce;
   Future<List<ChaptarrBook>>? request;
   String lastQuery = '';
-  bool choosing = false;
-  final added = <(String, ChaptarrFormat), int>{};
 
   @override
   void dispose() {
+    debounce?.cancel();
     query.dispose();
     super.dispose();
   }
 
-  void search(String text) {
-    lastQuery = text.trim();
-    setState(
-      () => request = lastQuery.isEmpty ? null : widget.api.lookup(lastQuery),
-    );
+  void search(String text, {bool refresh = false}) {
+    debounce?.cancel();
+    final term = text.trim();
+    if (!refresh && term == lastQuery) return;
+    lastQuery = term;
+    final next = term.isEmpty ? null : widget.api.lookup(term);
+    setState(() {
+      request = next;
+    });
+  }
+
+  void changed(String text) {
+    debounce?.cancel();
+    if (text.trim().isEmpty) {
+      search('');
+      return;
+    }
+    debounce = Timer(const Duration(milliseconds: 500), () => search(text));
   }
 
   Future<void> choose(ChaptarrBook book) async {
-    if (choosing) return;
+    FocusManager.instance.primaryFocus?.unfocus();
     final selected = format;
-    final key = (book.foreignBookId, selected);
-    setState(() => choosing = true);
-    try {
-      int? id = added[key];
-      final editions = book.localEditions(selected);
-      if (id == null && editions.isNotEmpty) {
-        id = editions.length == 1
-            ? editions.single.id
-            : await showDialog<int>(
-                context: context,
-                builder: (dialog) => SimpleDialog(
-                  title: Text('chaptarr.ChooseEdition'.tr()),
-                  children: [
-                    for (final edition in editions)
-                      ListTile(
-                        title: Text(edition.title),
-                        subtitle: Text(
-                          [
-                            if (edition.narrator.isNotEmpty) edition.narrator,
-                            if (edition.hasFiles) 'chaptarr.Downloaded'.tr(),
-                            (edition.monitored
-                                    ? 'chaptarr.Monitored'
-                                    : 'chaptarr.Unmonitored')
-                                .tr(),
-                            '#${edition.id}',
-                          ].join(' · '),
-                        ),
-                        onTap: () => Navigator.pop(dialog, edition.id),
+    final editions = book.localEditions(selected);
+    if (editions.isNotEmpty) {
+      final id = editions.length == 1
+          ? editions.single.id
+          : await showDialog<int>(
+              context: context,
+              builder: (dialog) => SimpleDialog(
+                title: Text('chaptarr.ChooseEdition'.tr()),
+                children: [
+                  for (final edition in editions)
+                    SimpleDialogOption(
+                      onPressed: () => Navigator.pop(dialog, edition.id),
+                      child: Text(
+                        [
+                          edition.title,
+                          if (edition.narrator.isNotEmpty) edition.narrator,
+                          (edition.hasFiles
+                                  ? 'chaptarr.Downloaded'
+                                  : edition.monitored
+                                  ? 'chaptarr.Monitored'
+                                  : 'chaptarr.Unmonitored')
+                              .tr(),
+                          '#${edition.id}',
+                        ].join(' · '),
                       ),
-                  ],
-                ),
-              );
-        if (id == null || !mounted) return;
-      }
-      if (id != null) {
-        await context.push('/chaptarr/book/$id');
-        return;
-      }
-      final roots = await widget.api.roots(selected);
-      if (!mounted) return;
-      if (roots.isEmpty) {
-        showLunaInfoSnackBar(
-          title: 'chaptarr.NoRoot'.tr(),
-          message: 'chaptarr.ConfigureRoot'.tr(),
-        );
-        return;
-      }
-      final root = await showDialog<ChaptarrRoot>(
-        context: context,
-        builder: (dialog) => SimpleDialog(
-          title: Text(
-            'chaptarr.AddFormat'.tr(args: [book.title, selected.label]),
-          ),
-          children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Text('chaptarr.SelectRoot'.tr()),
-            ),
-            for (final root in roots)
-              SimpleDialogOption(
-                onPressed: () => Navigator.pop(dialog, root),
-                child: Text(root.path),
+                    ),
+                ],
               ),
-          ],
-        ),
-      );
-      if (root == null || !mounted) return;
-      final newId = await widget.api.add(book, selected, root);
+            );
+      if (id == null || !mounted) return;
+      await context.push('/chaptarr/book/$id');
+    } else {
+      await context.push('/chaptarr/add?format=${selected.name}', extra: book);
       if (!mounted) return;
-      setState(() => added[key] = newId);
-      showLunaSuccessSnackBar(
-        title: 'chaptarr.BookAdded'.tr(),
-        message: book.title,
-      );
-    } catch (e) {
-      if (mounted)
-        showLunaErrorSnackBar(title: 'chaptarr.ActionFailed'.tr(), error: e);
-    } finally {
-      if (mounted) setState(() => choosing = false);
+      final pending = widget.api.pendingImport(book, selected);
+      if (pending != null) {
+        try {
+          await pending;
+        } catch (_) {
+          /* Refresh actual library membership. */
+        }
+      }
     }
+    if (mounted) search(query.text, refresh: true);
   }
 
   @override
   Widget build(BuildContext context) => LunaScaffold(
     scaffoldKey: scaffold,
-    appBar: LunaAppBar(title: 'chaptarr.FindBook'.tr()),
+    appBar: LunaAppBar(
+      title: 'chaptarr.AddBook'.tr(),
+      actions: [
+        ChaptarrFormatMenu(
+          value: format,
+          onChanged: (value) => setState(() => format = value),
+        ),
+      ],
+    ),
     body: Column(
       children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: TextField(
-            controller: query,
-            autofocus: true,
-            textInputAction: TextInputAction.search,
-            decoration: InputDecoration(
-              labelText: 'chaptarr.SearchTitle'.tr(),
-              suffixIcon: IconButton(
-                icon: const Icon(Icons.search),
-                tooltip: 'chaptarr.FindBook'.tr(),
-                onPressed: () => search(query.text),
-              ),
-            ),
-            onSubmitted: search,
-          ),
+        LunaTextInputBar(
+          controller: query,
+          autofocus: true,
+          labelText: 'chaptarr.SearchTitle'.tr(),
+          onChanged: changed,
+          onSubmitted: search,
         ),
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          child: SegmentedButton<ChaptarrFormat>(
-            segments: [
-              for (final type in ChaptarrFormat.values)
-                ButtonSegment(value: type, label: Text(type.label)),
-            ],
-            selected: {format},
-            onSelectionChanged: choosing
-                ? null
-                : (s) => setState(() => format = s.single),
-          ),
-        ),
-        if (choosing) const LinearProgressIndicator(),
         if (request != null)
           Expanded(
             child: FutureBuilder<List<ChaptarrBook>>(
               future: request,
               builder: (context, snapshot) {
                 if (snapshot.connectionState != ConnectionState.done)
-                  return const Center(child: CircularProgressIndicator());
+                  return const LunaLoader();
                 if (snapshot.hasError)
-                  return LunaMessage.error(onTap: () => search(lastQuery));
+                  return LunaMessage.error(
+                    onTap: () => search(query.text, refresh: true),
+                  );
                 final books = snapshot.requireData;
                 if (books.isEmpty)
                   return LunaMessage(text: 'chaptarr.NoResults'.tr());
-                return ListView.builder(
+                return LunaListViewBuilder(
+                  controller: scrollController,
                   itemCount: books.length,
-                  itemBuilder: (context, index) {
-                    final book = books[index];
-                    final inLibrary =
-                        added.containsKey((book.foreignBookId, format)) ||
-                        book.localEditions(format).isNotEmpty;
-                    return LunaBlock(
-                      title: book.title,
-                      body: [TextSpan(text: book.author)],
-                      trailing: Icon(
-                        inLibrary ? Icons.check : Icons.add,
-                        semanticLabel:
-                            (inLibrary
-                                    ? 'chaptarr.InLibrary'
-                                    : 'chaptarr.AddBook')
-                                .tr(),
+                  itemBuilder: (_, i) {
+                    final book = books[i];
+                    final local = book.localEditions(format).isNotEmpty;
+                    return ChaptarrBookTile(
+                      api: widget.api,
+                      book: book,
+                      format: format,
+                      lookup: true,
+                      trailing: LunaIconButton(
+                        icon: local ? Icons.check_rounded : Icons.add_rounded,
+                        color: local ? LunaColours.accent : LunaColours.white,
                       ),
-                      onTap:
-                          choosing ||
-                              (!inLibrary &&
-                                  (book.foreignAuthorId.isEmpty ||
-                                      book.foreignBookId.isEmpty))
-                          ? null
-                          : () => choose(book),
+                      onTap: () => choose(book),
                     );
                   },
                 );
@@ -204,10 +160,4 @@ class _LookupState extends State<ChaptarrLookup> {
       ],
     ),
   );
-}
-
-extension ChaptarrFormatLabel on ChaptarrFormat {
-  String get label =>
-      (this == ChaptarrFormat.ebook ? 'chaptarr.Ebook' : 'chaptarr.Audiobook')
-          .tr();
 }

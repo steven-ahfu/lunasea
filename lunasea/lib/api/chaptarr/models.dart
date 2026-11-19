@@ -41,6 +41,12 @@ class ChaptarrBook {
   final String title;
   final String author;
   final String overview;
+  final DateTime? releaseDate;
+  final DateTime? added;
+  final int pageCount, sizeOnDisk;
+  final List<String> genres;
+  final String? cover;
+  final String? fanart;
   final String foreignBookId;
   final String foreignAuthorId;
   final ChaptarrFormat? format;
@@ -57,8 +63,20 @@ class ChaptarrBook {
           json['authorTitle'] as String? ??
           '',
       overview = json['overview'] as String? ?? '',
+      releaseDate = DateTime.tryParse(json['releaseDate'] as String? ?? ''),
+      added = DateTime.tryParse(json['added'] as String? ?? ''),
+      pageCount = json['pageCount'] as int? ?? 0,
+      sizeOnDisk = json['statistics']?['sizeOnDisk'] as int? ?? 0,
+      genres = (json['genres'] as List? ?? const [])
+          .whereType<String>()
+          .toList(),
+      cover = _image(json, 'cover') ?? json['remoteCover'] as String?,
+      fanart = _image(json, 'fanart'),
       foreignBookId = json['foreignBookId'] as String? ?? '',
-      foreignAuthorId = json['author']?['foreignAuthorId'] as String? ?? '',
+      foreignAuthorId =
+          json['author']?['foreignAuthorId'] as String? ??
+          json['foreignAuthorId'] as String? ??
+          '',
       format = ChaptarrFormat.parse(json['mediaType']),
       monitored = json['monitored'] == true,
       hasFiles = json['hasFiles'] == true,
@@ -79,12 +97,31 @@ class ChaptarrBook {
           ],
       };
 
+  static String? _image(Map<String, dynamic> json, String type) =>
+      (json['images'] as List?)
+          ?.whereType<Map>()
+          .where((image) => image['coverType'] == type)
+          .map((image) => image['url'])
+          .whereType<String>()
+          .where((url) => url.isNotEmpty)
+          .firstOrNull;
+
   List<ChaptarrEdition> localEditions(ChaptarrFormat selected) {
     final editions = _editions[selected]!;
     if (editions.isNotEmpty || format != selected || (id ?? 0) <= 0)
       return editions;
     return [ChaptarrEdition(id!, title, narrator, monitored, hasFiles)];
   }
+}
+
+class ChaptarrBookFile {
+  final String path;
+  final int size;
+  final String quality;
+  ChaptarrBookFile.fromJson(Map<String, dynamic> json)
+    : path = json['path'] as String? ?? '',
+      size = json['size'] as int? ?? 0,
+      quality = json['quality']?['quality']?['name'] as String? ?? '';
 }
 
 class ChaptarrRoot {
@@ -152,6 +189,16 @@ class ChaptarrPage<T> {
           .map(parse)
           .toList(),
       total = (json['totalCount'] ?? json['totalRecords']) as int;
+}
+
+class ChaptarrLibraryMatches {
+  final List<ChaptarrBook> books;
+
+  ChaptarrLibraryMatches.fromJson(Map<String, dynamic> json)
+    : books = (json['books'] as List)
+          .cast<Map<String, dynamic>>()
+          .map(ChaptarrBook.fromJson)
+          .toList();
 }
 
 class ChaptarrStatus {

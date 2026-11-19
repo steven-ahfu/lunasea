@@ -17,6 +17,7 @@ class LunaReleaseFiltersButton<T extends Object> extends StatelessWidget {
   final LunaReleaseFilters filters;
   final ValueChanged<LunaReleaseFilters> onFiltersChanged;
   final Future<List<LunaReleaseFilterData>>? releases;
+  final List<LunaReleaseFilter> availableFilters;
 
   const LunaReleaseFiltersButton({
     super.key,
@@ -29,6 +30,7 @@ class LunaReleaseFiltersButton<T extends Object> extends StatelessWidget {
     required this.filters,
     required this.onFiltersChanged,
     required this.releases,
+    this.availableFilters = LunaReleaseFilter.values,
   });
 
   String _label(LunaReleaseFilter filter) =>
@@ -139,7 +141,7 @@ class LunaReleaseFiltersButton<T extends Object> extends StatelessWidget {
               ),
             ),
           const PopupMenuDivider(),
-          for (final filter in LunaReleaseFilter.values)
+          for (final filter in availableFilters)
             PopupMenuItem<Object>(
               value: filter,
               enabled: releases != null,

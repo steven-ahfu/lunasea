@@ -32,5 +32,20 @@
   "chaptarr.NoResults": "No matching books.",
   "chaptarr.InLibrary": "In library",
   "chaptarr.ChooseEdition": "Choose a library edition",
-  "chaptarr.AddBook": "Add book"
+  "chaptarr.AddBook": "Add book",
+  "chaptarr.Author": "Author",
+  "chaptarr.Pages": "{} pages",
+  "chaptarr.Title": "Title",
+  "chaptarr.List": "List",
+  "chaptarr.Covers": "Cover grid",
+  "chaptarr.EmptyMissing": "No monitored books are missing for this format.",
+  "chaptarr.EmptyUpcoming": "No releases in the next 30 days for this format.",
+  "chaptarr.Overview": "Overview",
+  "chaptarr.RootFolder": "Root folder",
+  "chaptarr.ImportUnconfirmed": "Chaptarr has not confirmed the import. Check the library before trying again.",
+  "chaptarr.ImportNotFound": "This edition is not in the library yet.",
+  "chaptarr.CheckingLibrary": "Checking the library…",
+  "chaptarr.ImportPending": "Chaptarr is importing this book. You can return to search while it finishes.",
+  "chaptarr.CheckLibrary": "Check library",
+  "chaptarr.MissingIdentifier": "This result is missing a book or author identifier. Choose another search result."
 }

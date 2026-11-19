@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:retrofit/retrofit.dart';
 import 'package:lunasea/api/chaptarr/models.dart';
+import 'package:lunasea/api/chaptarr/releases.dart';
 
 part 'api.g.dart';
 
@@ -14,8 +15,32 @@ abstract class ChaptarrService {
   @GET('book/paged')
   Future<ChaptarrLibraryPage> books(@Queries() Map<String, dynamic> query);
 
+  @GET('book')
+  Future<List<ChaptarrBook>> catalogue(@Queries() Map<String, dynamic> query);
+
+  @GET('library/search')
+  Future<ChaptarrLibraryMatches> librarySearch(
+    @Query('term') String term,
+    @Query('limit') int limit,
+  );
+
+  @GET('calendar')
+  Future<List<ChaptarrBook>> calendar(@Queries() Map<String, dynamic> query);
+
+  @GET('wanted/missing')
+  Future<ChaptarrLibraryPage> missing(@Queries() Map<String, dynamic> query);
+
   @GET('book/{id}')
   Future<ChaptarrBook> book(@Path() int id);
+
+  @GET('bookfile')
+  Future<List<ChaptarrBookFile>> files(@Query('bookId') int id);
+
+  @GET('release')
+  Future<ChaptarrReleaseResults> releases(@Query('bookId') int id);
+
+  @POST('release')
+  Future<void> grab(@Body() Map<String, dynamic> release);
 
   @GET('book/lookup')
   Future<List<ChaptarrBook>> lookup(@Query('term') String term);
