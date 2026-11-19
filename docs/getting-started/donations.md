@@ -6,24 +6,10 @@ nav_order: 4
 
 # Donations
 
-Thanks for considering donating to LunaSea! Donations are what keep the project alive and completely free for everyone to use.
+Open **About** at the bottom of the LunaSea drawer. In **Support development**, swipe or use the arrows to choose Bitcoin or Monero. Scan the QR code with your wallet or tap **Copy address**.
 
-## In-App Purchases
+## Building from source
 
-If you have downloaded LunaSea through the Play Store or App Store, you can directly donate using in-app purchases! Simply head to the Settings and tap the "Donations" tile. There are four options available (all scaled to USD): **$0.99, $2.99, $4.99, and $9.99**.
+Set `BTC_ADDRESS` and `MONERO_ADDRESS` in the repository-root `.env`. From the `lunasea/` app directory, run `npm run generate:environment` before building. The generator reads only these two settings from the file. Leave an address empty to omit that currency.
 
-> If you are using TestFlight builds on iOS devices, you will need to switch to the App Store version to donate. Any in-app purchases executed on a TestFlight build do not actually get processed.
-{: .warning }
-
-## Ko-Fi
-
-I have setup a [Ko-Fi page](https://ko-fi.com/jagandeepbrar) for LunaSea!
-
-Ko-Fi allows you to make a one-time donation in $1 increments using PayPal.
-
-## GitHub Sponsors
-
-I have setup a [GitHub Sponsors](https://github.com/sponsors/JagandeepBrar) account!
-
-GitHub Sponsors allow you to setup a recurring donation in the amount of $1 to $5.
-
+For Android builds in GitHub Actions, configure the same names as repository secrets. The app embeds these public receive addresses at build time.

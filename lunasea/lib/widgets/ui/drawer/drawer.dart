@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:lunasea/core.dart';
 import 'package:lunasea/api/wake_on_lan/wake_on_lan.dart';
+import 'package:lunasea/router/routes/about.dart';
 
 class LunaDrawer extends StatelessWidget {
   final String page;
 
   const LunaDrawer({
-    Key? key,
+    super.key,
     required this.page,
-  }) : super(key: key);
+  });
 
   static List<LunaModule> moduleAlphabeticalList() {
     return LunaModule.active
@@ -86,6 +87,15 @@ class LunaDrawer extends StatelessWidget {
         }
         return const SizedBox(height: 0.0);
       }),
+      const Divider(),
+      ListTile(
+        leading: const Icon(Icons.info_outline_rounded),
+        title: Text('lunasea.About'.tr()),
+        onTap: () {
+          Navigator.of(context).pop();
+          AboutRoutes.PAGE.go();
+        },
+      ),
     ];
   }
 

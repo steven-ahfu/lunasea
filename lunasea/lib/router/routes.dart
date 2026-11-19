@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:lunasea/modules.dart';
 import 'package:lunasea/router/router.dart';
+import 'package:lunasea/router/routes/about.dart';
 import 'package:lunasea/router/routes/bios.dart';
 import 'package:lunasea/router/routes/dashboard.dart';
 import 'package:lunasea/router/routes/external_modules.dart';
@@ -20,6 +21,7 @@ import 'package:lunasea/widgets/pages/not_enabled.dart';
 
 enum LunaRoutes {
   bios('bios', root: BIOSRoutes.HOME),
+  about('about', root: AboutRoutes.PAGE),
   dashboard('dashboard', root: DashboardRoutes.HOME),
   externalModules('external_modules', root: ExternalModulesRoutes.HOME),
   lidarr('lidarr', root: LidarrRoutes.HOME),

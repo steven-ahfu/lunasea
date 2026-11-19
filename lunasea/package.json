@@ -23,7 +23,7 @@
     "generate:assets": "dart pub global activate spider && spider build",
     "generate:build_runner": "dart run build_runner build --delete-conflicting-outputs",
     "generate:build_runner:watch": "dart run build_runner watch --delete-conflicting-outputs",
-    "generate:environment": "dart run environment_config:generate",
+    "generate:environment": "dart run scripts/generate_environment.dart",
     "generate:localization": "dart ./scripts/generate_localization.dart",
     "prepare": "husky install && npm run git:ignore && flutter pub get",
     "prepare:keychain": "npm run prepare:keychain:ios && npm run prepare:keychain:macos",

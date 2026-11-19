@@ -60,6 +60,8 @@ jobs:
           FLAVOR: stable
           COMMIT: ${{ github.sha }}
           BUILD: ${{ github.run_number }}
+          BTC_ADDRESS: ${{ secrets.BTC_ADDRESS }}
+          MONERO_ADDRESS: ${{ secrets.MONERO_ADDRESS }}
         run: |
           dart run environment_config:generate
           dart scripts/generate_localization.dart

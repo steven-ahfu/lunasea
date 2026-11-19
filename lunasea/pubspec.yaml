@@ -38,6 +38,7 @@ dependencies:
   json_annotation: ^4.9.0
   modal_bottom_sheet: ^3.0.0-pre
   package_info_plus: ^10.1.0
+  qr_flutter: ^4.1.0
   path_provider: ^2.1.0
   percent_indicator: ^4.2.5
   quick_actions: ^1.0.5
