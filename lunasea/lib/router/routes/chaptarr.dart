@@ -3,6 +3,9 @@ import 'package:lunasea/core.dart';
 import 'package:lunasea/modules/chaptarr.dart';
 import 'package:lunasea/modules/chaptarr/routes/home.dart';
 import 'package:lunasea/modules/chaptarr/routes/details.dart';
+import 'package:lunasea/modules/chaptarr/routes/edit_book.dart';
+import 'package:lunasea/modules/chaptarr/routes/system.dart';
+import 'package:lunasea/modules/chaptarr/routes/manual_import.dart';
 import 'package:lunasea/modules/chaptarr/routes/lookup.dart';
 import 'package:lunasea/modules/chaptarr/routes/add_book.dart';
 import 'package:lunasea/modules/chaptarr/routes/paged.dart';
@@ -12,6 +15,11 @@ import 'package:lunasea/router/routes.dart';
 enum ChaptarrRoutes with LunaRoutesMixin {
   HOME('/chaptarr'),
   DETAILS('book/:id'),
+  EDIT('edit'),
+  AUTHOR('author'),
+  SYSTEM('system'),
+  TAGS('tags'),
+  IMPORT('import'),
   RELEASES('releases'),
   LOOKUP('lookup'),
   ADD('add'),
@@ -43,6 +51,19 @@ enum ChaptarrRoutes with LunaRoutesMixin {
       final format =
           ChaptarrFormat.parse(state.uri.queryParameters['format']) ??
           ChaptarrFormat.ebook;
+      if (this == SYSTEM || this == TAGS)
+        return ChaptarrSystem(
+          key: ValueKey((api, this)),
+          api: api,
+          tags: this == TAGS,
+        );
+      if (this == IMPORT)
+        return ChaptarrManualImport(
+          key: ValueKey((api, state.uri)),
+          api: api,
+          format: format,
+          downloadId: state.uri.queryParameters['downloadId'],
+        );
       if (this == ADD && state.extra is ChaptarrBook) {
         return ChaptarrAddBook(
           key: ValueKey((api, state.extra, format)),
@@ -59,6 +80,13 @@ enum ChaptarrRoutes with LunaRoutesMixin {
         );
       final id = int.tryParse(state.pathParameters['id'] ?? '');
       if (id == null || id <= 0) return ChaptarrHome(api: api);
+      if (this == EDIT || this == AUTHOR)
+        return ChaptarrEditBook(
+          key: ValueKey((api, id, this)),
+          api: api,
+          bookId: id,
+          author: this == AUTHOR,
+        );
       if (this == RELEASES)
         return ChaptarrReleases(key: ValueKey((api, id)), api: api, id: id);
       return ChaptarrDetails(key: ValueKey((api, id)), api: api, id: id);
@@ -72,9 +100,14 @@ enum ChaptarrRoutes with LunaRoutesMixin {
           LOOKUP.routes,
           ADD.routes,
           QUEUE.routes,
+          SYSTEM.routes,
+          TAGS.routes,
+          IMPORT.routes,
           HISTORY.routes,
         ]
       : this == DETAILS
-      ? [RELEASES.routes]
+      ? [RELEASES.routes, EDIT.routes]
+      : this == EDIT
+      ? [AUTHOR.routes]
       : [];
 }

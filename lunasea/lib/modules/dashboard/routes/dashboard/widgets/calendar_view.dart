@@ -1,3 +1,4 @@
+import 'package:lunasea/modules/dashboard/core/api/data/chaptarr.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -216,6 +217,9 @@ class _State extends State<CalendarView> {
           break;
         case CalendarRadarrData:
           if (!(event as CalendarRadarrData).hasFile) counter++;
+          break;
+        case CalendarChaptarrData:
+          if (!(event as CalendarChaptarrData).book.hasFiles) counter++;
           break;
         case CalendarSonarrData:
           CalendarSonarrData _event = event;

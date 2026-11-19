@@ -1,5 +1,6 @@
 import express from 'express';
 import * as Middleware from '../server/middleware';
+import * as Chaptarr from './chaptarr';
 import { Controller as Custom } from './custom';
 import { Controller as Lidarr } from './lidarr';
 import { Controller as Overseerr } from './overseerr';
@@ -16,6 +17,7 @@ router.use(Middleware.extractNotificationOptions);
 
 // Modules
 Custom.enable(router);
+Chaptarr.enable(router);
 Lidarr.enable(router);
 Overseerr.enable(router);
 Radarr.enable(router);

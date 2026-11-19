@@ -11,6 +11,7 @@ enum DashboardDatabase<T> with LunaTableMixin<T> {
   CALENDAR_STARTING_TYPE<CalendarStartingType>(CalendarStartingType.CALENDAR),
   CALENDAR_ENABLE_LIDARR<bool>(true),
   CALENDAR_ENABLE_RADARR<bool>(true),
+  CALENDAR_ENABLE_CHAPTARR<bool>(true),
   CALENDAR_ENABLE_SONARR<bool>(true),
   CALENDAR_DAYS_PAST<int>(14),
   CALENDAR_DAYS_FUTURE<int>(14);

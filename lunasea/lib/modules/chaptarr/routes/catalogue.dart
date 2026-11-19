@@ -9,6 +9,8 @@ import 'package:lunasea/extensions/scroll_controller.dart';
 enum _CatalogueFilter {
   all('radarr.All'),
   monitored('chaptarr.Monitored'),
+  unmonitored('chaptarr.Unmonitored'),
+  missing('radarr.Missing'),
   downloaded('chaptarr.Downloaded');
 
   final String label;
@@ -21,6 +23,7 @@ class ChaptarrCatalogue extends StatefulWidget {
   final bool upcoming;
   final ScrollController scroll;
   final ValueChanged<int> onBook;
+  final ValueChanged<ChaptarrBook> onBookActions;
   final int revision;
 
   const ChaptarrCatalogue({
@@ -30,6 +33,7 @@ class ChaptarrCatalogue extends StatefulWidget {
     required this.upcoming,
     required this.scroll,
     required this.onBook,
+    required this.onBookActions,
     required this.revision,
   });
 
@@ -41,10 +45,19 @@ class _CatalogueState extends State<ChaptarrCatalogue>
     with AutomaticKeepAliveClientMixin {
   final query = TextEditingController();
   final scaffold = GlobalKey<ScaffoldState>();
-  bool ascending = true;
+  late bool ascending =
+      widget.upcoming || ChaptarrDatabase.SORT_ASCENDING.read();
   late bool grid = ChaptarrDatabase.GRID_VIEW.read();
-  bool byAuthor = false;
-  _CatalogueFilter filter = _CatalogueFilter.all;
+  late bool byAuthor =
+      !widget.upcoming && ChaptarrDatabase.SORT_BY_AUTHOR.read();
+  late _CatalogueFilter filter = widget.upcoming
+      ? _CatalogueFilter.all
+      : _CatalogueFilter.values
+                .where(
+                  (f) => f.name == ChaptarrDatabase.CATALOGUE_FILTER.read(),
+                )
+                .firstOrNull ??
+            _CatalogueFilter.all;
   String term = '';
   Timer? debounce;
   Future<List<ChaptarrBook>>? request;
@@ -125,6 +138,7 @@ class _CatalogueState extends State<ChaptarrCatalogue>
                     },
                     onSelected: (value) {
                       setState(() => filter = value);
+                      ChaptarrDatabase.CATALOGUE_FILTER.update(value.name);
                       widget.scroll.animateToStart();
                     },
                   ),
@@ -142,6 +156,8 @@ class _CatalogueState extends State<ChaptarrCatalogue>
                         ascending = value == byAuthor ? !ascending : true;
                         byAuthor = value;
                       });
+                      ChaptarrDatabase.SORT_BY_AUTHOR.update(byAuthor);
+                      ChaptarrDatabase.SORT_ASCENDING.update(ascending);
                       widget.scroll.animateToStart();
                     },
                   ),
@@ -192,17 +208,23 @@ class _CatalogueState extends State<ChaptarrCatalogue>
                       page,
                       byAuthor: byAuthor,
                       ascending: ascending,
-                      monitored: filter == _CatalogueFilter.monitored
-                          ? true
-                          : null,
-                      downloaded: filter == _CatalogueFilter.downloaded
-                          ? true
-                          : null,
+                      monitored: switch (filter) {
+                        _CatalogueFilter.monitored ||
+                        _CatalogueFilter.missing => true,
+                        _CatalogueFilter.unmonitored => false,
+                        _ => null,
+                      },
+                      downloaded: switch (filter) {
+                        _CatalogueFilter.downloaded => true,
+                        _CatalogueFilter.missing => false,
+                        _ => null,
+                      },
                     ),
                     tile: (book) => ChaptarrBookTile(
                       api: widget.api,
                       book: book,
                       grid: grid,
+                      onLongPress: () => widget.onBookActions(book),
                       onTap: book.id == null
                           ? null
                           : () => widget.onBook(book.id!),
@@ -219,6 +241,10 @@ class _CatalogueState extends State<ChaptarrCatalogue>
                           .where(
                             (book) =>
                                 book.format == widget.format &&
+                                (filter != _CatalogueFilter.unmonitored ||
+                                    !book.monitored) &&
+                                (filter != _CatalogueFilter.missing ||
+                                    (book.monitored && !book.hasFiles)) &&
                                 (filter != _CatalogueFilter.monitored ||
                                     book.monitored) &&
                                 (filter != _CatalogueFilter.downloaded ||
@@ -263,6 +289,7 @@ class _CatalogueState extends State<ChaptarrCatalogue>
                             api: widget.api,
                             book: books[i],
                             grid: covers,
+                            onLongPress: () => widget.onBookActions(books[i]),
                             onTap: books[i].id == null
                                 ? null
                                 : () => widget.onBook(books[i].id!),

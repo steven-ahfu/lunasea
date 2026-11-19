@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:lunasea/core.dart';
 import 'package:lunasea/modules/chaptarr.dart';
 import 'package:lunasea/modules/chaptarr/routes/book_tile.dart';
+import 'package:lunasea/modules/chaptarr/routes/management_dialogs.dart';
 
 class ChaptarrAddBook extends StatefulWidget {
   final ChaptarrAPI api;
@@ -26,6 +27,50 @@ class _AddState extends State<ChaptarrAddBook> with LunaScrollControllerMixin {
   bool busy = false;
   bool uncertain = false;
   String? error;
+  bool searchForMissing = false;
+  (int, String)? quality, metadata;
+
+  Widget profileTile(bool isQuality, int defaultId) {
+    final field = isQuality ? quality : metadata;
+    final label =
+        (isQuality ? 'radarr.QualityProfile' : 'chaptarr.MetadataProfile').tr();
+    return chaptarrSetting(
+      label,
+      field?.$2 ?? 'chaptarr.RootDefault'.tr(),
+      busy || uncertain
+          ? null
+          : () async {
+              try {
+                final rows = await (isQuality
+                    ? widget.api.qualityProfiles()
+                    : widget.api.metadataProfiles());
+                if (!mounted || busy || uncertain) return;
+                final options = chaptarrProfileNames(rows, widget.format);
+                final id = await chaptarrChoice<int>(
+                  context,
+                  label,
+                  options,
+                  current: field?.$1 ?? defaultId,
+                );
+                if (!mounted || id == null) return;
+                setState(() {
+                  final next = (id, options[id]!);
+                  if (isQuality) {
+                    quality = next;
+                  } else {
+                    metadata = next;
+                  }
+                });
+              } catch (e) {
+                if (mounted)
+                  showLunaErrorSnackBar(
+                    title: 'chaptarr.ActionFailed'.tr(),
+                    error: e,
+                  );
+              }
+            },
+    );
+  }
 
   @override
   void initState() {
@@ -145,8 +190,26 @@ class _AddState extends State<ChaptarrAddBook> with LunaScrollControllerMixin {
                     ),
                     onTap: busy || uncertain
                         ? null
-                        : () => setState(() => selected = folder),
+                        : () => setState(() {
+                            selected = folder;
+                            quality = null;
+                            metadata = null;
+                          }),
                   ),
+              if (root != null) ...[
+                profileTile(true, root.qualityProfileId),
+                profileTile(false, root.metadataProfileId),
+                LunaBlock(
+                  title: 'chaptarr.SearchOnAdd'.tr(),
+                  trailing: AbsorbPointer(
+                    absorbing: busy || uncertain,
+                    child: LunaSwitch(
+                      value: searchForMissing,
+                      onChanged: (v) => setState(() => searchForMissing = v),
+                    ),
+                  ),
+                ),
+              ],
               if (error != null) LunaMessage.inList(text: error!),
               if (busy) ...[
                 const LinearProgressIndicator(),
@@ -191,7 +254,18 @@ class _AddState extends State<ChaptarrAddBook> with LunaScrollControllerMixin {
       color: Colors.white,
       onTap: () {
         if (!busy && root != null)
-          observe(widget.api.add(widget.book, widget.format, root));
+          observe(
+            widget.api.add(
+              widget.book,
+              widget.format,
+              ChaptarrRoot(
+                root.path,
+                quality?.$1 ?? root.qualityProfileId,
+                metadata?.$1 ?? root.metadataProfileId,
+              ),
+              searchForMissing: searchForMissing,
+            ),
+          );
       },
     );
   }

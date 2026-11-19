@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lunasea/core.dart';
 import 'package:lunasea/modules/chaptarr.dart';
+import 'package:lunasea/modules/chaptarr/routes/event_tile.dart';
 
 class ChaptarrPaged<T> extends StatefulWidget {
   final ScrollController scroll;
@@ -109,6 +110,7 @@ class ChaptarrActivity extends StatefulWidget {
 class _ActivityState extends State<ChaptarrActivity>
     with LunaScrollControllerMixin {
   final scaffold = GlobalKey<ScaffoldState>();
+  int revision = 0;
   @override
   Widget build(BuildContext context) => LunaScaffold(
     scaffoldKey: scaffold,
@@ -117,23 +119,16 @@ class _ActivityState extends State<ChaptarrActivity>
       scrollControllers: [scrollController],
     ),
     body: ChaptarrPaged<ChaptarrEvent>(
+      key: ValueKey(revision),
       scroll: scrollController,
       empty: (widget.history ? 'chaptarr.EmptyHistory' : 'chaptarr.EmptyQueue')
           .tr(),
       load: (page) => widget.api.activity(history: widget.history, page: page),
-      tile: (event) => LunaBlock(
-        title: event.title,
-        body: [
-          TextSpan(text: event.status),
-          TextSpan(text: event.subtitle),
-        ],
-        bodyLeadingIcons: [
-          widget.history ? Icons.history_rounded : Icons.downloading_rounded,
-          Icons.info_outline_rounded,
-        ],
-        onTap: (event.bookId ?? 0) > 0
-            ? () => context.push('/chaptarr/book/${event.bookId}')
-            : null,
+      tile: (event) => ChaptarrEventTile(
+        api: widget.api,
+        event: event,
+        history: widget.history,
+        refresh: () => setState(() => revision++),
       ),
     ),
   );

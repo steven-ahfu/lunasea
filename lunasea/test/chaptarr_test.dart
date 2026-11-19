@@ -5,6 +5,48 @@ import 'package:lunasea/database/models/profile.dart';
 import 'package:lunasea/modules.dart';
 
 void main() {
+  test(
+    'clearing author tags cannot restore combined tags or change the other format',
+    () async {
+      final dio = Dio(BaseOptions(baseUrl: 'https://books.example/api/v1/'));
+      addTearDown(dio.close);
+      final requests = <RequestOptions>[];
+      dio.interceptors.add(
+        InterceptorsWrapper(
+          onRequest: (req, handler) {
+            requests.add(req);
+            handler.resolve(
+              Response(
+                requestOptions: req,
+                statusCode: 200,
+                data: {
+                  'id': 4,
+                  'ebookTags': [5],
+                  'audiobookTags': [8],
+                  'tags': [5, 8],
+                },
+              ),
+            );
+          },
+        ),
+      );
+      await ChaptarrAPI.withClient(dio).updateAuthor(
+        4,
+        {'ebookTags': <int>[]},
+        format: ChaptarrFormat.ebook,
+        moveFiles: false,
+      );
+      final put = requests.last;
+      expect(put.method, 'PUT');
+      expect(put.path, 'author/4');
+      expect(put.queryParameters, {'mediaType': 'ebook', 'moveFiles': false});
+      expect(put.data, {
+        'id': 4,
+        'ebookTags': [],
+        'audiobookTags': [8],
+      });
+    },
+  );
   test('older profile backups default to a disabled Chaptarr connection', () {
     final original = LunaProfile(sonarrHost: 'https://sonarr.example');
     final backup = original.toJson()

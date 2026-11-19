@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:lunasea/core.dart';
 import 'package:lunasea/modules/chaptarr.dart';
 import 'package:lunasea/modules/chaptarr/routes/book_tile.dart';
+import 'package:lunasea/modules/chaptarr/routes/book_actions.dart';
 import 'package:lunasea/modules/chaptarr/routes/catalogue.dart';
 import 'package:lunasea/modules/chaptarr/routes/paged.dart';
 import 'package:lunasea/router/routes/settings.dart';
+import 'package:lunasea/extensions/string/links.dart';
+import 'package:lunasea/modules/chaptarr/routes/management_dialogs.dart';
 
 class ChaptarrHome extends StatefulWidget {
   final ChaptarrAPI? api;
@@ -23,6 +26,52 @@ class _HomeState extends State<ChaptarrHome> {
       ChaptarrFormat.parse(ChaptarrDatabase.FORMAT.read()) ??
       ChaptarrFormat.ebook;
   int revision = 0;
+  Future<void> bookActions(ChaptarrBook book) async {
+    final result = await showBookActions(context, widget.api!, book);
+    if (mounted && result != null) setState(() => revision++);
+  }
+
+  bool running = false;
+  Future<void> tools(ChaptarrAPI api) async {
+    final commands = {
+      'web': 'radarr.ViewWebGUI'.tr(),
+      'RssSync': 'radarr.RunRSSSync'.tr(),
+      'MissingBookSearch': 'radarr.SearchAllMissing'.tr(),
+      'RefreshAuthor': 'radarr.UpdateLibrary'.tr(),
+      'Backup': 'radarr.BackupDatabase'.tr(),
+    };
+    final key = await chaptarrChoice(
+      context,
+      'lunasea.Settings'.tr(),
+      commands,
+    );
+    if (!mounted || key == null || running) return;
+    if (key == 'web') {
+      await api.webUrl.openLink();
+      return;
+    }
+    if (key == 'MissingBookSearch' &&
+        await chaptarrConfirm(context, commands[key]!, format.label) == null)
+      return;
+    if (!mounted) return;
+    setState(() => running = true);
+    try {
+      await api.libraryCommand(
+        key,
+        format: key == 'MissingBookSearch' ? format : null,
+      );
+      if (mounted)
+        showLunaSuccessSnackBar(
+          title: 'chaptarr.CommandQueued'.tr(),
+          message: commands[key]!,
+        );
+    } catch (e) {
+      if (mounted)
+        showLunaErrorSnackBar(title: 'chaptarr.ActionFailed'.tr(), error: e);
+    } finally {
+      if (mounted) setState(() => running = false);
+    }
+  }
 
   Future<void> open(String path) async {
     await context.push('/chaptarr/$path');
@@ -68,11 +117,14 @@ class _HomeState extends State<ChaptarrHome> {
                 onPressed: () => open('lookup?format=${format.name}'),
               ),
             ),
+          if (api != null) ChaptarrFormatMenu(value: format, onChanged: select),
           if (api != null)
-            ChaptarrFormatMenu(
-              value: format,
-              onChanged: select,
-              overflow: true,
+            Tooltip(
+              message: 'lunasea.Settings'.tr(),
+              child: LunaIconButton.appBar(
+                icon: Icons.more_vert_rounded,
+                onPressed: running ? null : () => tools(api),
+              ),
             ),
         ],
       ),
@@ -113,6 +165,7 @@ class _HomeState extends State<ChaptarrHome> {
                     upcoming: upcoming,
                     scroll: scroll[upcoming ? 1 : 0],
                     onBook: (id) => open('book/$id'),
+                    onBookActions: bookActions,
                   ),
                 ChaptarrPaged<ChaptarrBook>(
                   key: ValueKey((format, revision)),
@@ -122,6 +175,7 @@ class _HomeState extends State<ChaptarrHome> {
                   tile: (book) => ChaptarrBookTile(
                     api: api,
                     book: book,
+                    onLongPress: () => bookActions(book),
                     onTap: book.id == null
                         ? null
                         : () => open('book/${book.id}'),
@@ -132,7 +186,14 @@ class _HomeState extends State<ChaptarrHome> {
                   children: [
                     for (final item in [
                       ('history', 'radarr.History', Icons.history_rounded),
+                      (
+                        'import?format=${format.name}',
+                        'radarr.ManualImport',
+                        Icons.download_done_rounded,
+                      ),
                       ('queue', 'radarr.Queue', Icons.queue_play_next_rounded),
+                      ('system', 'radarr.SystemStatus', Icons.computer_rounded),
+                      ('tags', 'radarr.Tags', Icons.style_rounded),
                     ].indexed)
                       LunaBlock(
                         title: item.$2.$2.tr(),

@@ -51,6 +51,22 @@ class _State extends State<ConfigurationDashboardCalendarRoute>
         _startingView(),
         LunaDivider(),
         _modulesLidarr(),
+        DashboardDatabase.CALENDAR_ENABLE_CHAPTARR.listenableBuilder(
+          builder: (_, _) => LunaBlock(
+            title: LunaModule.CHAPTARR.title,
+            body: [
+              TextSpan(
+                text: 'settings.ShowCalendarEntries'.tr(
+                  args: [LunaModule.CHAPTARR.title],
+                ),
+              ),
+            ],
+            trailing: LunaSwitch(
+              value: DashboardDatabase.CALENDAR_ENABLE_CHAPTARR.read(),
+              onChanged: DashboardDatabase.CALENDAR_ENABLE_CHAPTARR.update,
+            ),
+          ),
+        ),
         _modulesRadarr(),
         _modulesSonarr(),
       ],

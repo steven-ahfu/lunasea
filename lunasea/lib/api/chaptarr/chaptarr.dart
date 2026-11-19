@@ -7,6 +7,8 @@ import 'package:lunasea/database/models/profile.dart';
 
 export 'package:lunasea/api/chaptarr/models.dart';
 
+part 'management.dart';
+
 class ChaptarrAPI {
   static const pageSize = 50;
   final Dio _client;
@@ -91,6 +93,10 @@ class ChaptarrAPI {
   Future<List<ChaptarrBook>> upcoming(DateTime today) {
     final start = DateTime(today.year, today.month, today.day);
     final end = DateTime(today.year, today.month, today.day + 30);
+    return calendar(start, end);
+  }
+
+  Future<List<ChaptarrBook>> calendar(DateTime start, DateTime end) {
     return _service.calendar({
       'start': start.toUtc().toIso8601String(),
       'end': end.toUtc().toIso8601String(),
@@ -160,11 +166,16 @@ class ChaptarrAPI {
           .whereType<ChaptarrRoot>()
           .toList();
 
-  Future<int> add(ChaptarrBook book, ChaptarrFormat format, ChaptarrRoot root) {
+  Future<int> add(
+    ChaptarrBook book,
+    ChaptarrFormat format,
+    ChaptarrRoot root, {
+    bool searchForMissing = false,
+  }) {
     final key = (book.foreignBookId, format);
     return _imports.putIfAbsent(
       key,
-      () => _import(book, format, root).whenComplete(() {
+      () => _import(book, format, root, searchForMissing).whenComplete(() {
         _imports.remove(key);
       }),
     );
@@ -177,6 +188,7 @@ class ChaptarrAPI {
     ChaptarrBook book,
     ChaptarrFormat format,
     ChaptarrRoot root,
+    bool searchForMissing,
   ) async {
     final result = await _service.addBook({
       'foreignBookId': book.foreignBookId,
@@ -188,7 +200,7 @@ class ChaptarrAPI {
       'metadataProfileId': root.metadataProfileId,
       'authorMonitoring': {
         'monitor': 'specificBook',
-        'searchForMissing': false,
+        'searchForMissing': searchForMissing,
       },
     });
     return result.id;

@@ -5,6 +5,7 @@ abstract class LunaWebhooks {
 
   /// Modules supported by the LunaSea notification service (ntfy backend).
   static const Set<LunaModule> supportedModules = {
+    LunaModule.CHAPTARR,
     LunaModule.LIDARR,
     LunaModule.RADARR,
     LunaModule.SONARR,

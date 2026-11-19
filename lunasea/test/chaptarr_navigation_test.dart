@@ -40,6 +40,11 @@ void main() {
       final dio = Dio(BaseOptions(baseUrl: 'https://chaptarr.example/api/v1/'));
       final release = Completer<void>();
       int posts = 0;
+      int bookUpdates = 0;
+      int authorUpdates = 0;
+      var quality = 1;
+      var monitored = true;
+      var selectedEdition = 101;
       final libraryBook = {
         'id': 14,
         'title': 'Library book',
@@ -121,12 +126,69 @@ void main() {
                 await release.future;
                 body = {'id': 19};
               case 'book/19':
+                if (req.method == 'PUT') {
+                  bookUpdates++;
+                  expect(req.data['ebookMonitored'], false);
+                  expect(req.data['audiobookMonitored'], true);
+                  expect(req.data['anyEditionOk'], false);
+                  expect(req.data['foreignBookId'], toAdd['foreignBookId']);
+                  final active = (req.data['editions'] as List).where(
+                    (e) => e['monitored'] == true,
+                  );
+                  selectedEdition = active.single['id'];
+                  expect(active.single['publisher'], 'New press');
+                  monitored = req.data['monitored'];
+                }
                 body = {
                   ...toAdd,
                   'id': 19,
                   'mediaType': 'ebook',
-                  'monitored': true,
+                  'monitored': monitored,
+                  'anyEditionOk': bookUpdates == 0,
+                  'audiobookMonitored': true,
+                  'authorId': 4,
                 };
+              case 'edition':
+                expect(req.queryParameters['bookId'], 19);
+                body = [
+                  for (final id in [101, 102])
+                    {
+                      'id': id,
+                      'title': id == 101
+                          ? 'Original edition'
+                          : 'Second edition',
+                      'publisher': id == 101 ? 'First press' : 'New press',
+                      'monitored': selectedEdition == id,
+                    },
+                ];
+              case 'author/4':
+                if (req.method == 'PUT') {
+                  authorUpdates++;
+                  expect(req.data['audiobookQualityProfileId'], 3);
+                  expect(req.queryParameters['moveFiles'], false);
+                  quality = req.data['ebookQualityProfileId'];
+                }
+                body = {
+                  'id': 4,
+                  'authorName': 'Example author',
+                  'ebookQualityProfileId': quality,
+                  'audiobookQualityProfileId': 3,
+                  'ebookMetadataProfileId': 2,
+                  'ebookRootFolderPath': '/ebooks',
+                  'ebookTags': [],
+                };
+              case 'qualityprofile':
+                body = [
+                  {'id': 1, 'name': 'Default books', 'profileType': 'ebook'},
+                  {'id': 2, 'name': 'EPUB only', 'profileType': 'ebook'},
+                  {'id': 3, 'name': 'Audio only', 'profileType': 'audiobook'},
+                ];
+              case 'metadataprofile':
+                body = [
+                  {'id': 2, 'name': 'Book metadata', 'profileType': 2},
+                ];
+              case 'tag':
+                body = [];
               case 'release':
                 if (req.method == 'POST') {
                   expect(req.data, {
@@ -258,6 +320,44 @@ void main() {
       await tester.tap(find.widgetWithText(LunaButton, 'Book details'));
       await settle();
       expect(requests, contains('book/19'));
+      await tester.tap(find.byTooltip('Edit Book'));
+      await settle();
+      await tester.tap(find.byType(LunaSwitch).first);
+      await settle();
+      await tester.tap(find.text('Edition', findRichText: true));
+      await settle();
+      await tester.tap(find.text('Second edition · New press'));
+      await settle();
+      await tester.tap(find.text('Author settings', findRichText: true));
+      await settle();
+      expect(find.text('Book metadata', findRichText: true), findsOneWidget);
+      await tester.tap(find.text('Quality Profile', findRichText: true));
+      await settle();
+      expect(find.text('Audio only'), findsNothing);
+      await tester.tap(find.text('EPUB only'));
+      await settle();
+      await tester.tap(find.widgetWithText(LunaButton, 'Update'));
+      await settle();
+      expect(authorUpdates, 1);
+      expect(quality, 2);
+      expect(bookUpdates, 0);
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(LunaButton, 'Update'));
+      await settle();
+      expect(bookUpdates, 1);
+      expect(monitored, false);
+      expect(selectedEdition, 102);
+      expect(find.byTooltip('Unmonitored'), findsOneWidget);
+      await tester.tap(find.byTooltip('Edit Book'));
+      await settle();
+      expect(
+        find.text('Second edition · New press', findRichText: true),
+        findsOneWidget,
+      );
+      await tester.tap(find.byType(LunaSwitch).first);
+      router.pop();
+      await settle();
+      expect(bookUpdates, 1);
       await tester.tap(tab(Icons.insert_drive_file_outlined));
       await settle();
       expect(find.text('Example.epub', findRichText: true), findsOneWidget);
@@ -282,6 +382,123 @@ void main() {
       expect(find.text('sonarr.DownloadingRelease'.tr()), findsOneWidget);
       await tester.pump(const Duration(seconds: 3));
       await settle();
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
+
+  testWidgets(
+    'queue removal and manual import preview require explicit selections',
+    (tester) async {
+      final requests = <RequestOptions>[];
+      bool removed = false;
+      final dio = Dio(BaseOptions(baseUrl: 'https://books.example/api/v1/'));
+      dio.interceptors.add(
+        InterceptorsWrapper(
+          onRequest: (req, handler) {
+            requests.add(req);
+            final Object data = switch (req.path) {
+              'book/paged' => {'records': [], 'totalCount': 0},
+              'queue' => {
+                'records': [
+                  if (!removed)
+                    {
+                      'id': 4,
+                      'title': 'Queue item',
+                      'status': 'completed',
+                      'downloadId': 'job-4',
+                      'mediaType': 'audiobook',
+                    },
+                ],
+                'totalRecords': removed ? 0 : 1,
+              },
+              'manualimport' => [
+                {
+                  'id': 7,
+                  'path': '/test/file.m4b',
+                  'book': {'id': 14, 'title': 'Matched edition'},
+                  'author': {'id': 3},
+                  'editionId': 16,
+                  'quality': {
+                    'quality': {'id': 2},
+                  },
+                },
+              ],
+              'command' || 'queue/4' => {},
+              'calendar' => [],
+              'wanted/missing' ||
+              'history' => {'records': [], 'totalRecords': 0},
+              _ => throw StateError(req.path),
+            };
+            if (req.path == 'queue/4') removed = true;
+            handler.resolve(
+              Response(requestOptions: req, statusCode: 200, data: data),
+            );
+          },
+        ),
+      );
+      final state = ChaptarrState()
+        ..enabled = true
+        ..api = ChaptarrAPI.withClient(dio);
+      final router = GoRouter(
+        navigatorKey: LunaRouter.navigator,
+        initialLocation: '/chaptarr/queue',
+        routes: [ChaptarrRoutes.HOME.routes],
+      );
+      LunaRouter.router = router;
+      addTearDown(router.dispose);
+      addTearDown(state.dispose);
+      await tester.pumpWidget(
+        ChangeNotifierProvider.value(
+          value: state,
+          child: MaterialApp.router(
+            theme: ThemeData.dark(useMaterial3: false),
+            routerConfig: router,
+          ),
+        ),
+      );
+      Future<void> tap(String label) async {
+        await tester.tap(
+          find.text(label, findRichText: true).hitTestable().last,
+        );
+        await tester.pumpAndSettle();
+      }
+
+      await tester.pumpAndSettle();
+      await tap('Queue item');
+      await tap('Remove from queue');
+      await tap('Cancel');
+      expect(removed, isFalse);
+      await tap('Queue item');
+      await tap('Manual Import');
+      final preview = requests.lastWhere((r) => r.path == 'manualimport');
+      expect(preview.queryParameters['mediaType'], 'audiobook');
+      expect(preview.queryParameters['downloadId'], 'job-4');
+      expect(find.widgetWithText(LunaButton, 'Import'), findsNothing);
+      await tester.tap(find.byType(Checkbox));
+      await tester.pumpAndSettle();
+      await tap('Import');
+      await tap('Copy or hardlink');
+      await tap('Import');
+      final command = requests
+          .singleWhere((r) => r.method == 'POST' && r.path == 'command')
+          .data;
+      expect(command['name'], 'ManualImport');
+      expect(command['importMode'], 'copy');
+      expect(command['replaceExistingFiles'], false);
+      expect(command['files'].single['editionId'], 16);
+      expect(command['files'].single['downloadId'], 'job-4');
+      await tap('Queue item');
+      await tap('Remove from queue');
+      await tap('Blocklist this release');
+      await tap('Remove from queue');
+      expect(requests.lastWhere((r) => r.method == 'DELETE').queryParameters, {
+        'removeFromClient': false,
+        'blocklist': true,
+        'skipRedownload': false,
+        'changeCategory': false,
+      });
+      expect(find.text('Queue item', findRichText: true), findsNothing);
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox());
     },

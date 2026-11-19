@@ -37,6 +37,8 @@ class ChaptarrEdition {
 }
 
 class ChaptarrBook {
+  final int? authorId;
+  final Map<String, String> links;
   final int? id;
   final String title;
   final String author;
@@ -56,7 +58,15 @@ class ChaptarrBook {
   final Map<ChaptarrFormat, List<ChaptarrEdition>> _editions;
 
   ChaptarrBook.fromJson(Map<String, dynamic> json)
-    : id = json['id'] as int?,
+    : authorId = json['authorId'] ?? json['author']?['id'],
+      links = {
+        for (final link in (json['links'] as List? ?? []).whereType<Map>())
+          if (link['name'] is String &&
+              link['url'] is String &&
+              {'https', 'http'}.contains(Uri.tryParse(link['url'])?.scheme))
+            link['name']: link['url'],
+      },
+      id = json['id'] as int?,
       title = json['title'] as String? ?? '',
       author =
           json['author']?['authorName'] as String? ??
@@ -115,11 +125,17 @@ class ChaptarrBook {
 }
 
 class ChaptarrBookFile {
+  final DateTime? dateAdded;
+  final Map<String, dynamic> mediaInfo;
+  final int? id;
   final String path;
   final int size;
   final String quality;
   ChaptarrBookFile.fromJson(Map<String, dynamic> json)
-    : path = json['path'] as String? ?? '',
+    : dateAdded = DateTime.tryParse(json['dateAdded'] ?? ''),
+      mediaInfo = json['mediaInfo'] ?? const {},
+      id = json['id'],
+      path = json['path'] as String? ?? '',
       size = json['size'] as int? ?? 0,
       quality = json['quality']?['quality']?['name'] as String? ?? '';
 }
@@ -156,13 +172,17 @@ class ChaptarrRoot {
 }
 
 class ChaptarrEvent {
+  final int? id;
+  final Map<String, dynamic> details;
   final String title;
   final String status;
   final String subtitle;
   final int? bookId;
 
   ChaptarrEvent.queue(Map<String, dynamic> json)
-    : title = json['title'] ?? json['book']?['title'] ?? '',
+    : id = json['id'],
+      details = json,
+      title = json['title'] ?? json['book']?['title'] ?? '',
       status = json['status'] ?? '',
       subtitle = [
         json['downloadClient'],
@@ -172,7 +192,9 @@ class ChaptarrEvent {
       bookId = json['bookId'];
 
   ChaptarrEvent.history(Map<String, dynamic> json)
-    : title = json['sourceTitle'] ?? json['book']?['title'] ?? '',
+    : id = json['id'],
+      details = json,
+      title = json['sourceTitle'] ?? json['book']?['title'] ?? '',
       status = json['eventType']?.toString() ?? '',
       subtitle = json['date'] as String? ?? '',
       bookId = json['bookId'];

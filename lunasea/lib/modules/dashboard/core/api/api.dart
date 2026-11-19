@@ -1,3 +1,5 @@
+import 'package:lunasea/api/chaptarr/chaptarr.dart';
+import 'package:lunasea/modules/dashboard/core/api/data/chaptarr.dart';
 import 'package:lunasea/database/models/profile.dart';
 import 'package:lunasea/database/tables/dashboard.dart';
 import 'package:lunasea/extensions/datetime.dart';
@@ -21,6 +23,28 @@ class API {
 
   Future<Map<DateTime, List<CalendarData>>> getUpcoming(DateTime today) async {
     Map<DateTime, List<CalendarData>> _upcoming = {};
+    if (profile.chaptarrEnabled &&
+        profile.chaptarrHost.trim().isNotEmpty &&
+        profile.chaptarrKey.trim().isNotEmpty &&
+        DashboardDatabase.CALENDAR_ENABLE_CHAPTARR.read()) {
+      final api = ChaptarrAPI.from(profile);
+      try {
+        final books = await api.calendar(
+          _startBoundDate(today),
+          _endBoundDate(today),
+        );
+        for (final book in books) {
+          final date = book.releaseDate?.toLocal().floor();
+          if (book.id != null &&
+              date != null &&
+              _isDateWithinBounds(date, today)) {
+            (_upcoming[date] ??= []).add(CalendarChaptarrData(book));
+          }
+        }
+      } finally {
+        api.close();
+      }
+    }
     if (profile.lidarrEnabled &&
         DashboardDatabase.CALENDAR_ENABLE_LIDARR.read()) {
       await _getLidarrUpcoming(_upcoming, today);

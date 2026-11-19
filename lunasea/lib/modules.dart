@@ -6,6 +6,7 @@ import 'package:lunasea/extensions/string/links.dart';
 import 'package:lunasea/router/router.dart';
 import 'package:lunasea/router/routes.dart';
 import 'package:lunasea/router/routes/settings.dart';
+import 'package:lunasea/router/routes/chaptarr.dart';
 import 'package:lunasea/modules/search.dart';
 import 'package:lunasea/modules/settings.dart';
 import 'package:lunasea/modules/chaptarr.dart';
@@ -469,6 +470,8 @@ extension LunaModuleRoutingExtension on LunaModule {
 extension LunaModuleWebhookExtension on LunaModule {
   bool get hasWebhooks {
     switch (this) {
+      case LunaModule.CHAPTARR:
+        return true;
       case LunaModule.LIDARR:
         return true;
       case LunaModule.RADARR:
@@ -486,6 +489,8 @@ extension LunaModuleWebhookExtension on LunaModule {
 
   String? get webhookDocs {
     switch (this) {
+      case LunaModule.CHAPTARR:
+        return 'https://github.com/steven-ahfu/lunasea/blob/main/docs/modules/chaptarr.md';
       case LunaModule.LIDARR:
         return 'https://docs.lunasea.app/lunasea/notifications/lidarr';
       case LunaModule.RADARR:
@@ -503,6 +508,22 @@ extension LunaModuleWebhookExtension on LunaModule {
 
   Future<void> handleWebhook(Map<String, dynamic> data) async {
     switch (this) {
+      case LunaModule.CHAPTARR:
+        final id = int.tryParse(data['id']?.toString() ?? '');
+        switch (data['event']) {
+          case 'Grab':
+            return ChaptarrRoutes.QUEUE.go(buildTree: true);
+          case 'Health':
+          case 'ApplicationUpdate':
+            return ChaptarrRoutes.SYSTEM.go(buildTree: true);
+          case 'Download':
+          case 'BookAdded':
+          case 'BookFileDelete':
+            if (id != null && id > 0) {
+              return ChaptarrRoutes.DETAILS.go(buildTree: true, params: {'id': '$id'});
+            }
+        }
+        return ChaptarrRoutes.HOME.go(buildTree: true);
       case LunaModule.LIDARR:
         return LidarrWebhooks().handle(data);
       case LunaModule.RADARR:

@@ -2,9 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:lunasea/core.dart';
 import 'package:lunasea/modules/chaptarr.dart';
 import 'package:lunasea/modules/chaptarr/routes/book_tile.dart';
+import 'package:lunasea/modules/chaptarr/routes/book_actions.dart';
 import 'package:lunasea/modules/chaptarr/routes/paged.dart';
+import 'package:lunasea/modules/chaptarr/routes/event_tile.dart';
 import 'package:lunasea/extensions/int/bytes.dart';
 import 'package:lunasea/extensions/datetime.dart';
+import 'package:lunasea/extensions/string/links.dart';
+import 'package:lunasea/modules/chaptarr/routes/management_dialogs.dart';
 
 class ChaptarrDetails extends StatefulWidget {
   final ChaptarrAPI api;
@@ -22,6 +26,7 @@ class _DetailsState extends State<ChaptarrDetails>
   final historyScroll = ScrollController();
   late Future<ChaptarrBook> request = widget.api.book(widget.id);
   bool busy = false;
+  int revision = 0;
 
   @override
   void dispose() {
@@ -33,8 +38,25 @@ class _DetailsState extends State<ChaptarrDetails>
 
   void reload() {
     setState(() {
+      revision++;
       request = widget.api.book(widget.id);
     });
+  }
+
+  Future<void> settings(ChaptarrBook book) async {
+    if (busy) return;
+    setState(() => busy = true);
+    try {
+      final result = await showBookActions(context, widget.api, book);
+      if (!mounted || result == null) return;
+      if (result == ChaptarrBookChange.removed) {
+        context.go('/chaptarr');
+      } else {
+        reload();
+      }
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
   }
 
   Future<void> act(
@@ -73,23 +95,66 @@ class _DetailsState extends State<ChaptarrDetails>
           builder: (_, snapshot) {
             final book = snapshot.data;
             if (book == null) return const SizedBox();
-            return Tooltip(
-              message:
-                  (book.monitored
-                          ? 'chaptarr.Monitored'
-                          : 'chaptarr.Unmonitored')
-                      .tr(),
-              child: LunaIconButton.appBar(
-                icon: book.monitored
-                    ? Icons.bookmark_rounded
-                    : Icons.bookmark_border_rounded,
-                onPressed: busy
-                    ? null
-                    : () => act(
-                        () =>
-                            widget.api.setMonitored(widget.id, !book.monitored),
-                      ),
-              ),
+            return Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (book.links.isNotEmpty)
+                  Tooltip(
+                    message: 'chaptarr.Links'.tr(),
+                    child: LunaIconButton.appBar(
+                      icon: LunaIcons.LINK,
+                      onPressed: () async {
+                        final link = await chaptarrChoice(
+                          context,
+                          'chaptarr.Links'.tr(),
+                          {for (final e in book.links.entries) e.value: e.key},
+                        );
+                        if (link != null) await link.openLink();
+                      },
+                    ),
+                  ),
+                Tooltip(
+                  message: 'chaptarr.EditBook'.tr(),
+                  child: LunaIconButton.appBar(
+                    icon: LunaIcons.EDIT,
+                    onPressed: busy
+                        ? null
+                        : () async {
+                            await context.push(
+                              '/chaptarr/book/${widget.id}/edit',
+                            );
+                            if (mounted) reload();
+                          },
+                  ),
+                ),
+                Tooltip(
+                  message:
+                      (book.monitored
+                              ? 'chaptarr.Monitored'
+                              : 'chaptarr.Unmonitored')
+                          .tr(),
+                  child: LunaIconButton.appBar(
+                    icon: book.monitored
+                        ? Icons.bookmark_rounded
+                        : Icons.bookmark_border_rounded,
+                    onPressed: busy
+                        ? null
+                        : () => act(
+                            () => widget.api.setMonitored(
+                              widget.id,
+                              !book.monitored,
+                            ),
+                          ),
+                  ),
+                ),
+                Tooltip(
+                  message: 'lunasea.Settings'.tr(),
+                  child: LunaIconButton.appBar(
+                    icon: Icons.more_vert_rounded,
+                    onPressed: busy ? null : () => settings(book),
+                  ),
+                ),
+              ],
             );
           },
         ),
@@ -132,22 +197,25 @@ class _DetailsState extends State<ChaptarrDetails>
       controller: pages,
       children: [
         overview(),
-        _BookFiles(api: widget.api, id: widget.id, scroll: filesScroll),
+        _BookFiles(
+          key: ValueKey(revision),
+          api: widget.api,
+          id: widget.id,
+          scroll: filesScroll,
+          onChanged: reload,
+        ),
         ChaptarrPaged<ChaptarrEvent>(
+          key: ValueKey(('history', revision)),
           scroll: historyScroll,
           empty: 'chaptarr.EmptyHistory'.tr(),
           load: (page) =>
               widget.api.activity(history: true, page: page, bookId: widget.id),
-          tile: (event) => LunaBlock(
-            title: event.title,
-            body: [
-              TextSpan(text: event.status),
-              TextSpan(text: event.subtitle),
-            ],
-            bodyLeadingIcons: const [
-              Icons.history_rounded,
-              Icons.access_time_rounded,
-            ],
+          tile: (event) => ChaptarrEventTile(
+            api: widget.api,
+            event: event,
+            history: true,
+            showBook: false,
+            refresh: reload,
           ),
         ),
       ],
@@ -213,12 +281,42 @@ class _BookFiles extends StatefulWidget {
   final ChaptarrAPI api;
   final int id;
   final ScrollController scroll;
-  const _BookFiles({required this.api, required this.id, required this.scroll});
+  final VoidCallback onChanged;
+  const _BookFiles({
+    super.key,
+    required this.api,
+    required this.id,
+    required this.scroll,
+    required this.onChanged,
+  });
   @override
   State<_BookFiles> createState() => _FilesState();
 }
 
 class _FilesState extends State<_BookFiles> {
+  final deleting = <int>{};
+  Future<void> deleteFile(ChaptarrBookFile file) async {
+    final id = file.id!;
+    if (deleting.contains(id)) return;
+    setState(() => deleting.add(id));
+    try {
+      if (await chaptarrConfirm(
+            context,
+            'chaptarr.DeleteFile'.tr(),
+            file.path,
+          ) ==
+          null)
+        return;
+      await widget.api.removeFile(id);
+      if (mounted) widget.onChanged();
+    } catch (e) {
+      if (mounted)
+        showLunaErrorSnackBar(title: 'chaptarr.ActionFailed'.tr(), error: e);
+    } finally {
+      if (mounted) setState(() => deleting.remove(id));
+    }
+  }
+
   late Future<List<ChaptarrBookFile>> files = widget.api.files(widget.id);
   Future<void> refresh() async {
     setState(() {
@@ -253,20 +351,51 @@ class _FilesState extends State<_BookFiles> {
           itemCount: rows.length,
           itemBuilder: (_, i) {
             final file = rows[i];
-            return LunaBlock(
-              title: file.path.split(RegExp(r'[/\\]')).last,
-              body: [
-                TextSpan(
-                  text: [
-                    if (file.quality.isNotEmpty) file.quality,
-                    file.size.asBytes(),
-                  ].join(' · '),
+            return LunaTableCard(
+              content: [
+                LunaTableContent(
+                  title: 'file',
+                  body: file.path.split(RegExp(r'[/\\]')).last,
                 ),
-                TextSpan(text: file.path),
+                LunaTableContent(title: 'path', body: file.path),
+                LunaTableContent(title: 'quality', body: file.quality),
+                LunaTableContent(title: 'size', body: file.size.asBytes()),
+                if (file.dateAdded != null)
+                  LunaTableContent(
+                    title: 'added on',
+                    body: file.dateAdded!.asDateOnly(),
+                  ),
               ],
-              bodyLeadingIcons: const [
-                Icons.description_rounded,
-                Icons.folder_rounded,
+              buttons: [
+                if (file.mediaInfo.isNotEmpty)
+                  LunaButton.text(
+                    text: 'chaptarr.MediaInfo'.tr(),
+                    icon: Icons.info_outline_rounded,
+                    onTap: () => LunaDialogs().textPreview(
+                      context,
+                      'chaptarr.MediaInfo'.tr(),
+                      file.mediaInfo.entries
+                          .where(
+                            (e) =>
+                                e.value != null &&
+                                e.value.toString().isNotEmpty,
+                          )
+                          .map((e) => '${e.key}: ${e.value}')
+                          .join('\n'),
+                      alignLeft: true,
+                    ),
+                  ),
+                if (file.id != null)
+                  LunaButton(
+                    type: LunaButtonType.TEXT,
+                    text: 'chaptarr.DeleteFile'.tr(),
+                    icon: Icons.delete_rounded,
+                    color: LunaColours.red,
+                    loadingState: deleting.contains(file.id)
+                        ? LunaLoadingState.ACTIVE
+                        : LunaLoadingState.INACTIVE,
+                    onTap: () => deleteFile(file),
+                  ),
               ],
             );
           },

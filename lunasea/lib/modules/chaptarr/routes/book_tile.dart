@@ -76,6 +76,7 @@ class ChaptarrBookTile extends StatelessWidget {
   final ChaptarrFormat? format;
   final Widget? trailing;
   final VoidCallback? onTap;
+  final VoidCallback? onLongPress;
   final bool lookup;
   const ChaptarrBookTile({
     super.key,
@@ -83,6 +84,7 @@ class ChaptarrBookTile extends StatelessWidget {
     required this.api,
     this.format,
     this.onTap,
+    this.onLongPress,
     this.trailing,
     this.grid = false,
     this.lookup = false,
@@ -100,6 +102,7 @@ class ChaptarrBookTile extends StatelessWidget {
             button: true,
             excludeSemantics: true,
             onTap: onTap,
+            onLongPress: onLongPress,
             label: [
               book.title,
               book.author,
@@ -126,6 +129,7 @@ class ChaptarrBookTile extends StatelessWidget {
           posterPlaceholderIcon: icon,
           disabled: !book.monitored,
           onTap: onTap,
+          onLongPress: onLongPress,
         ),
       );
     }
@@ -204,6 +208,7 @@ class ChaptarrBookTile extends StatelessWidget {
               ),
         trailing: trailing,
         onTap: onTap,
+        onLongPress: onLongPress,
       ),
     );
   }
