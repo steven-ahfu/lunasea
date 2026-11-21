@@ -48,7 +48,7 @@ class SonarrSeriesDetailsSeasonAllTile extends StatelessWidget {
       text: [
         '${series!.lunaPercentageComplete}%',
         LunaUI.TEXT_BULLET,
-        '${series!.statistics?.episodeFileCount ?? 0}/${series!.statistics?.episodeCount ?? 0}',
+        '${series!.statistics?.episodeFileCount ?? 0}/${series!.lunaTotalEpisodeCount}',
         'Episodes Available',
       ].join(' '),
     );

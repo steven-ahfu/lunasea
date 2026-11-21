@@ -31,6 +31,30 @@ void main() {
     await temp.delete(recursive: true);
   });
 
+  testWidgets('monitor changes retry only a failed cover', (tester) async {
+    Future<void> render(bool monitored) => tester.pumpWidget(MaterialApp(
+      home: Builder(builder: (context) => LunaNetworkImage(
+        context: context,
+        url: 'https://covers.example/book.jpg',
+        height: 100,
+        width: 80,
+        monitored: monitored,
+      )),
+    ));
+    FadeInImage image() => tester.widget<FadeInImage>(find.byType(FadeInImage));
+
+    await render(true);
+    final initialKey = image().key;
+    await render(false);
+    expect(image().key, initialKey);
+    image().imageErrorBuilder!(tester.element(find.byType(FadeInImage)),
+        StateError('Missing cover'), StackTrace.current);
+    await render(false);
+    expect(image().key, initialKey);
+    await render(true);
+    expect(image().key, isNot(initialKey));
+  });
+
   testWidgets(
     'library, upcoming, missing, activity and slow book import at phone width',
     (tester) async {

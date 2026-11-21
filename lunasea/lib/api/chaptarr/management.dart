@@ -144,8 +144,10 @@ extension ChaptarrManagement on ChaptarrAPI {
     );
   }
 
-  Future<void> refreshBook(int id) =>
-      _service.command({'name': 'RefreshBook', 'bookId': id});
+  Future<void> refreshBook(int id) async {
+    final response = await _client.post<Map>('command', data: {'name': 'RefreshBook', 'bookId': id});
+    await waitForRefresh(_client, response.data!);
+  }
   Future<void> removeBook(
     int id, {
     required bool deleteFiles,

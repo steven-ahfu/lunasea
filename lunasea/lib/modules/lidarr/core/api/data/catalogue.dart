@@ -74,17 +74,15 @@ class LidarrCatalogueData {
     }
   }
 
-  String get trackStats {
-    String percentage =
-        '(${(statistics['percentOfTracks'] as double).floor()}%)';
-    return '${statistics['trackFileCount']}/${statistics['trackCount']} $percentage';
-  }
+  int get totalTracks => statistics['totalTrackCount'] ?? statistics['trackCount'] ?? 0;
 
-  String get tracks {
-    return statistics['trackCount'] == 1
-        ? '${statistics['trackCount']} Track'
-        : '${statistics['trackCount']} Tracks';
-  }
+  int get _trackFiles => statistics['trackFileCount'] ?? 0;
+
+  double get trackPercentage => totalTracks == 0 ? 0 : 100 * _trackFiles / totalTracks;
+
+  String get trackStats => '$_trackFiles/$totalTracks (${trackPercentage.floor()}%)';
+
+  String get tracks => totalTracks == 1 ? '1 Track' : '$totalTracks Tracks';
 
   String get albums {
     return statistics['albumCount'] == 1

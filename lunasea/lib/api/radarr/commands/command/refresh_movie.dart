@@ -8,5 +8,6 @@ Future<RadarrCommand> _commandRefreshMovie(
     'name': 'RefreshMovie',
     if (movieIds != null) 'movieIds': movieIds,
   });
+  if (movieIds != null) await waitForRefresh(client, response.data);
   return RadarrCommand.fromJson(response.data);
 }

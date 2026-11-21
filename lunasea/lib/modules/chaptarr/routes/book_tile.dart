@@ -22,6 +22,7 @@ class ChaptarrDescriptionTile extends StatelessWidget {
     return LunaBlock(
       title: book.title,
       posterUrl: cover,
+      posterMonitored: book.monitored,
       backgroundUrl: background,
       posterHeaders: api.artworkHeaders(cover),
       backgroundHeaders: api.artworkHeaders(background),

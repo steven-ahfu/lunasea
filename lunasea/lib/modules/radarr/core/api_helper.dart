@@ -57,14 +57,14 @@ class RadarrAPIHelper {
     bool showSnackbar = true,
   }) async {
     if (context.read<RadarrState>().enabled) {
-      return await context
-          .read<RadarrState>()
-          .api!
-          .command
-          .refreshMovie(movieIds: [movie.id!]).then((_) {
+      final state = context.read<RadarrState>();
+      final api = state.api!;
+      return await api.command.refreshMovie(movieIds: [movie.id!]).then((_) async {
+        if (state.api != api) return false;
+        await state.resetSingleMovie(movie.id!);
         if (showSnackbar)
           showLunaSuccessSnackBar(
-              title: 'Refreshing...', message: movie.title.uiSafe());
+              title: 'radarr.RefreshMovie'.tr(), message: movie.title.uiSafe());
         return true;
       }).catchError((error, stack) {
         LunaLogger()

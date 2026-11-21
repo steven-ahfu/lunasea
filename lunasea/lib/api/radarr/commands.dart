@@ -2,6 +2,7 @@
 library radarr_commands;
 
 import 'package:dio/dio.dart';
+import 'package:lunasea/api/wait_for_refresh.dart';
 import 'package:lunasea/api/radarr/models.dart';
 import 'package:lunasea/api/radarr/types.dart';
 

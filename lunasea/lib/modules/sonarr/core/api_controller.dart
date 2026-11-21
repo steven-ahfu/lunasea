@@ -264,15 +264,34 @@ class SonarrAPIController {
         }
         return series[seriesId]!.clone();
       }).then((series) async {
-        series.seasons!.forEach((seriesSeason) {
-          if (seriesSeason.seasonNumber == season.seasonNumber) {
-            seriesSeason.monitored = !seriesSeason.monitored!;
+        final selected = series.seasons!.firstWhere(
+          (s) => s.seasonNumber == season.seasonNumber,
+        );
+        selected.monitored = !selected.monitored!;
+        final state = context.read<SonarrState>();
+        final api = state.api!;
+        await api.series.update(series: series);
+        if (state.api != api) return;
+        final cached = (await state.series)?[series.id]?.clone();
+        final saved = cached?.seasons?.where((s) => s.seasonNumber == season.seasonNumber).firstOrNull;
+        if (cached == null || saved == null) return;
+        saved.monitored = selected.monitored;
+        await state.setSingleSeries(cached);
+        if (saved.posterUri(state.host) == null) {
+          try {
+            final fresh = await api.series.get(seriesId: series.id!, includeSeasonImages: true);
+            final source = fresh.seasons?.where((s) => s.seasonNumber == season.seasonNumber).firstOrNull;
+            final current = (await state.series)?[series.id];
+            final target = current?.seasons?.where((s) => s.seasonNumber == season.seasonNumber).firstOrNull;
+            if (state.api == api && current != null && target != null &&
+                target.posterUri(state.host) == null && source?.posterUri(state.host) != null) {
+              target.images = source!.images;
+              await state.setSingleSeries(current);
+            }
+          } catch (error, stack) {
+            LunaLogger().error('Unable to load missing season cover', error, stack);
           }
-        });
-        await context.read<SonarrState>().api!.series.update(series: series);
-        return series;
-      }).then((series) {
-        return context.read<SonarrState>().setSingleSeries(series);
+        }
       }).then((series) {
         if (showSnackbar) {
           showLunaSuccessSnackBar(
@@ -627,21 +646,31 @@ class SonarrAPIController {
     bool showSnackbar = true,
   }) async {
     if (context.read<SonarrState>().enabled) {
-      return await context
-          .read<SonarrState>()
-          .api!
-          .command
-          .refreshSeries(seriesId: series.id)
-          .then((_) {
+      final state = context.read<SonarrState>();
+      final api = state.api!;
+      return await api.command.refreshSeries(seriesId: series.id).then((command) async {
         if (showSnackbar)
           showLunaSuccessSnackBar(
             title: 'lunasea.Refreshing'.tr(),
             message: series.title,
           );
+        final deadline = DateTime.now().add(const Duration(minutes: 5));
+        while (command.status != 'completed') {
+          if (command.status != 'queued' && command.status != 'started') {
+            throw StateError(command.message ?? 'Refresh status: ${command.status}');
+          }
+          if (DateTime.now().isAfter(deadline)) {
+            throw StateError('Timed out waiting for Sonarr to refresh the series');
+          }
+          await Future<void>.delayed(const Duration(seconds: 2));
+          if (state.api != api) return false;
+          command = await api.command.getById(command.id!);
+        }
+        if (state.api == api) await state.fetchSeries(series.id!);
         return true;
       }).catchError((error, stack) {
         LunaLogger().error(
-          'Sonarr: Unable to refresh movie: ${series.id}',
+          'Sonarr: Unable to refresh series: ${series.id}',
           error,
           stack,
         );

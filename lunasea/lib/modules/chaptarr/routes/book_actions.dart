@@ -3,7 +3,7 @@ import 'package:lunasea/core.dart';
 import 'package:lunasea/modules/chaptarr.dart';
 import 'package:lunasea/modules/chaptarr/routes/management_dialogs.dart';
 
-enum ChaptarrBookChange { updated, removed }
+enum ChaptarrBookChange { updated, monitoring, removed }
 
 Future<ChaptarrBookChange?> showBookActions(
   BuildContext context,
@@ -27,12 +27,15 @@ Future<ChaptarrBookChange?> showBookActions(
       case 'edit':
         await context.push('/chaptarr/book/$id/edit');
       case 'monitor':
-        await api.setMonitored(id, !book.monitored);
+        final monitored = !book.monitored;
+        await api.setMonitored(id, monitored);
+        book.monitored = monitored;
+        return ChaptarrBookChange.monitoring;
       case 'refresh':
         await api.refreshBook(id);
         if (context.mounted)
           showLunaSuccessSnackBar(
-            title: 'chaptarr.CommandQueued'.tr(),
+            title: 'chaptarr.RefreshBook'.tr(),
             message: book.title,
           );
       case 'rename':

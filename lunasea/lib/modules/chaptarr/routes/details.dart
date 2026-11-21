@@ -51,7 +51,7 @@ class _DetailsState extends State<ChaptarrDetails>
       if (!mounted || result == null) return;
       if (result == ChaptarrBookChange.removed) {
         context.go('/chaptarr');
-      } else {
+      } else if (result != ChaptarrBookChange.monitoring) {
         reload();
       }
     } finally {
@@ -62,6 +62,7 @@ class _DetailsState extends State<ChaptarrDetails>
   Future<void> act(
     Future<void> Function() action, {
     bool search = false,
+    bool reloadAfter = true,
   }) async {
     if (busy) return;
     setState(() => busy = true);
@@ -73,7 +74,7 @@ class _DetailsState extends State<ChaptarrDetails>
           title: 'chaptarr.SearchQueued'.tr(),
           message: '',
         );
-      } else {
+      } else if (reloadAfter) {
         reload();
       }
     } catch (e) {
@@ -140,10 +141,12 @@ class _DetailsState extends State<ChaptarrDetails>
                     onPressed: busy
                         ? null
                         : () => act(
-                            () => widget.api.setMonitored(
-                              widget.id,
-                              !book.monitored,
-                            ),
+                            () async {
+                              final monitored = !book.monitored;
+                              await widget.api.setMonitored(widget.id, monitored);
+                              book.monitored = monitored;
+                            },
+                            reloadAfter: false,
                           ),
                   ),
                 ),

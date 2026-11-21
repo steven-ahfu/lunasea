@@ -25,6 +25,7 @@ class _State extends State<ArtistDetailsRoute> {
 
   LidarrCatalogueData? data;
   bool _error = false;
+  int albumRevision = 0;
 
   @override
   void initState() {
@@ -87,6 +88,10 @@ class _State extends State<ArtistDetailsRoute> {
         LidarrDetailsSettingsButton(
           data: data,
           remove: _removeCallback,
+          refresh: () async {
+            await _fetch();
+            if (mounted) setState(() => albumRevision++);
+          },
         ),
       ];
     }
@@ -104,7 +109,7 @@ class _State extends State<ArtistDetailsRoute> {
 
   List<Widget> get _tabs => [
         LidarrDetailsOverview(data: data!),
-        LidarrDetailsAlbumList(artistID: data!.artistID),
+        LidarrDetailsAlbumList(key: ValueKey(albumRevision), artistID: data!.artistID),
       ];
 
   Widget get _body => LunaPageView(

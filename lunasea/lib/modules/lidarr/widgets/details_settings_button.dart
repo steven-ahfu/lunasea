@@ -6,11 +6,13 @@ import 'package:lunasea/router/routes/lidarr.dart';
 class LidarrDetailsSettingsButton extends StatefulWidget {
   final LidarrCatalogueData? data;
   final Function(bool) remove;
+  final Future<void> Function() refresh;
 
   const LidarrDetailsSettingsButton({
     Key? key,
     required this.data,
     required this.remove,
+    required this.refresh,
   }) : super(key: key);
 
   @override
@@ -59,8 +61,9 @@ class _State extends State<LidarrDetailsSettingsButton> {
     final _api = LidarrAPI.from(LunaProfile.current);
     await _api
         .refreshArtist(widget.data!.artistID)
-        .then((_) => showLunaSuccessSnackBar(
-            title: 'Refreshing...', message: widget.data!.title))
+        .then<void>((_) async {
+          if (mounted) await widget.refresh();
+        })
         .catchError((error) =>
             showLunaErrorSnackBar(title: 'Failed to Refresh', error: error));
   }

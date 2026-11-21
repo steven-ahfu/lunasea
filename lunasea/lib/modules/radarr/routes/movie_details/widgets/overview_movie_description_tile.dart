@@ -16,6 +16,7 @@ class RadarrMovieDetailsOverviewDescriptionTile extends StatelessWidget {
       posterPlaceholderIcon: LunaIcons.VIDEO_CAM,
       backgroundUrl: context.read<RadarrState>().getFanartURL(movie!.id),
       posterUrl: context.read<RadarrState>().getPosterURL(movie!.id),
+      posterMonitored: movie!.monitored,
       posterHeaders: context.read<RadarrState>().headers,
       title: movie!.title,
       body: [

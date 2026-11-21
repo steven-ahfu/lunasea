@@ -1,4 +1,5 @@
 import 'package:lunasea/core.dart';
+import 'package:lunasea/api/wait_for_refresh.dart';
 import 'package:lunasea/modules/lidarr.dart';
 
 class LidarrAPI {
@@ -94,13 +95,14 @@ class LidarrAPI {
 
   Future<bool> refreshArtist(int artistID) async {
     try {
-      await _dio.post(
+      final response = await _dio.post<Map>(
         'command',
         data: json.encode({
           'name': 'RefreshArtist',
           'artistId': artistID,
         }),
       );
+      await waitForRefresh(_dio, response.data!);
       return true;
     } on DioException catch (error, stack) {
       logError('Failed to refresh artist ($artistID)', error, stack);

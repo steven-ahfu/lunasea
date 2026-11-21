@@ -28,6 +28,7 @@ class _AddState extends State<ChaptarrAddBook> with LunaScrollControllerMixin {
   bool uncertain = false;
   String? error;
   bool searchForMissing = false;
+  bool monitored = true;
   (int, String)? quality, metadata;
 
   Widget profileTile(bool isQuality, int defaultId) {
@@ -200,6 +201,16 @@ class _AddState extends State<ChaptarrAddBook> with LunaScrollControllerMixin {
                 profileTile(true, root.qualityProfileId),
                 profileTile(false, root.metadataProfileId),
                 LunaBlock(
+                  title: 'radarr.Monitored'.tr(),
+                  trailing: AbsorbPointer(
+                    absorbing: busy || uncertain,
+                    child: LunaSwitch(
+                      value: monitored,
+                      onChanged: (v) => setState(() => monitored = v),
+                    ),
+                  ),
+                ),
+                if (monitored) LunaBlock(
                   title: 'chaptarr.SearchOnAdd'.tr(),
                   trailing: AbsorbPointer(
                     absorbing: busy || uncertain,
@@ -264,6 +275,7 @@ class _AddState extends State<ChaptarrAddBook> with LunaScrollControllerMixin {
                 metadata?.$1 ?? root.metadataProfileId,
               ),
               searchForMissing: searchForMissing,
+              monitored: monitored,
             ),
           );
       },

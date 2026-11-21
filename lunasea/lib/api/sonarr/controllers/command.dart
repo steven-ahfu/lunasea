@@ -5,6 +5,11 @@ class SonarrControllerCommand {
 
   SonarrControllerCommand(this._client);
 
+  Future<SonarrCommand> getById(int id) async {
+    final response = await _client.get('command/$id');
+    return SonarrCommand.fromJson(response.data);
+  }
+
   Future<SonarrCommand> backup() async => _commandBackup(_client);
 
   Future<SonarrCommand> episodeSearch({

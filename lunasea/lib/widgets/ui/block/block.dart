@@ -11,6 +11,7 @@ class LunaBlock extends StatelessWidget {
   final int skeletonSubtitles;
 
   final bool? disabled;
+  final bool? posterMonitored;
   final String? title;
   final Color titleColor;
   final Color? backgroundColor;
@@ -47,6 +48,7 @@ class LunaBlock extends StatelessWidget {
     this.skeletonPoster = true,
     this.skeletonSubtitles = 2,
     this.disabled = false,
+    this.posterMonitored,
     this.title,
     this.titleColor = Colors.white,
     this.backgroundColor,
@@ -224,6 +226,7 @@ class LunaBlock extends StatelessWidget {
         context: context,
         url: posterUrl ?? '',
         headers: posterHeaders,
+        monitored: posterMonitored ?? !(disabled ?? false),
         placeholderIcon: posterPlaceholderIcon,
         height: _dimension,
         width: _dimension / (posterIsSquare ? 1.0 : 1.5),

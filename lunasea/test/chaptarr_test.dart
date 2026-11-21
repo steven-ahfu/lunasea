@@ -131,6 +131,8 @@ void main() {
               'book/paged' => {'records': [], 'totalCount': 68},
               'queue' || 'history' => {'records': [], 'totalRecords': 0},
               'book/import' => {'id': 90},
+              'command' => {'id': 42, 'status': 'queued'},
+              'command/42' => {'id': 42, 'status': 'completed'},
               'book/lookup' => [
                 {
                   'title': 'Test',
@@ -171,6 +173,12 @@ void main() {
         requests.last.data['authorMonitoring']['searchForMissing'],
         isFalse,
       );
+      await api.add(book, ChaptarrFormat.ebook, const ChaptarrRoot('/ebooks', 9, 11),
+          monitored: false, searchForMissing: true);
+      expect(requests.last.data['monitored'], isFalse);
+      expect(requests.last.data['authorMonitoring'], {'monitor': 'none', 'searchForMissing': false});
+      await api.refreshBook(90);
+      expect(requests.last.path, 'command/42');
       await api.setMonitored(90, false);
       expect(requests.last.method, 'PUT');
       expect(requests.last.data, {

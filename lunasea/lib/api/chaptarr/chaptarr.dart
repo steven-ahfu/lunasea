@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:lunasea/api/wait_for_refresh.dart';
 import 'package:lunasea/api/chaptarr/api.dart';
 import 'package:lunasea/api/chaptarr/models.dart';
 import 'package:lunasea/api/chaptarr/releases.dart';
@@ -171,11 +172,12 @@ class ChaptarrAPI {
     ChaptarrFormat format,
     ChaptarrRoot root, {
     bool searchForMissing = false,
+    bool monitored = true,
   }) {
     final key = (book.foreignBookId, format);
     return _imports.putIfAbsent(
       key,
-      () => _import(book, format, root, searchForMissing).whenComplete(() {
+      () => _import(book, format, root, searchForMissing, monitored).whenComplete(() {
         _imports.remove(key);
       }),
     );
@@ -189,6 +191,7 @@ class ChaptarrAPI {
     ChaptarrFormat format,
     ChaptarrRoot root,
     bool searchForMissing,
+    bool monitored,
   ) async {
     final result = await _service.addBook({
       'foreignBookId': book.foreignBookId,
@@ -198,9 +201,10 @@ class ChaptarrAPI {
       'rootFolder': root.path,
       'qualityProfileId': root.qualityProfileId,
       'metadataProfileId': root.metadataProfileId,
+      'monitored': monitored,
       'authorMonitoring': {
-        'monitor': 'specificBook',
-        'searchForMissing': searchForMissing,
+        'monitor': monitored ? 'specificBook' : 'none',
+        'searchForMissing': monitored && searchForMissing,
       },
     });
     return result.id;

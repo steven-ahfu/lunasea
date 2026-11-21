@@ -128,6 +128,7 @@ class LunaGridBlock extends StatelessWidget {
           height: MAX_CROSS_AXIS_EXTENT * 1.5,
           width: MAX_CROSS_AXIS_EXTENT,
           headers: posterHeaders,
+          monitored: !disabled,
           placeholderIcon: posterPlaceholderIcon,
         ),
         padding: LunaUI.MARGIN_HALF,

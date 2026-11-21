@@ -127,10 +127,8 @@ class _Sorter {
   List<LidarrCatalogueData> _tracks(List data, bool ascending) {
     List<LidarrCatalogueData> _data = List.from(data, growable: false);
     ascending
-        ? _data.sort((a, b) => a.statistics['percentOfTracks']
-            .compareTo(b.statistics['percentOfTracks']))
-        : _data.sort((a, b) => b.statistics['percentOfTracks']
-            .compareTo(a.statistics['percentOfTracks']));
+        ? _data.sort((a, b) => a.trackPercentage.compareTo(b.trackPercentage))
+        : _data.sort((a, b) => b.trackPercentage.compareTo(a.trackPercentage));
     return _data;
   }
 

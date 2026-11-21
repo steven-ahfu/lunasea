@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:collection/collection.dart' show IterableExtension;
+
 import 'package:lunasea/core.dart';
 import 'package:lunasea/extensions/datetime.dart';
 import 'package:lunasea/extensions/int/bytes.dart';
@@ -26,10 +26,13 @@ class _State extends State<SonarrSeriesDetailsSeasonTile> {
 
   @override
   Widget build(BuildContext context) {
+    final state = context.read<SonarrState>();
+    final poster = widget.season.posterUri(state.host);
+    final local = poster != null && poster.origin == Uri.parse(state.host).origin;
     return LunaBlock(
       posterPlaceholderIcon: LunaIcons.VIDEO_CAM,
-      posterUrl: _posterUrl(),
-      posterHeaders: context.read<SonarrState>().headers,
+      posterUrl: poster?.toString() ?? '',
+      posterHeaders: local ? {...state.headers, 'X-Api-Key': state.apiKey} : const {},
       title: widget.season.lunaTitle,
       disabled: !widget.season.monitored!,
       body: [
@@ -43,11 +46,6 @@ class _State extends State<SonarrSeriesDetailsSeasonTile> {
     );
   }
 
-  String _posterUrl() {
-    final images = widget.season.images;
-    final poster = images?.firstWhereOrNull((e) => e.coverType == 'poster');
-    return poster?.remoteUrl ?? poster?.url ?? '';
-  }
 
   Future<void> _onTap() async {
     SonarrRoutes.SERIES_SEASON.go(params: {
@@ -95,7 +93,7 @@ class _State extends State<SonarrSeriesDetailsSeasonTile> {
       text: [
         '${widget.season.lunaPercentageComplete}%',
         LunaUI.TEXT_BULLET,
-        '${widget.season.statistics?.episodeFileCount ?? 0}/${widget.season.statistics?.episodeCount ?? 0}',
+        widget.season.lunaEpisodesAvailable,
         'sonarr.EpisodesAvailable'.tr(),
       ].join(' '),
     );

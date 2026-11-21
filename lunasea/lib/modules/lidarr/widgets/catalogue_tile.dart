@@ -121,8 +121,9 @@ class _State extends State<LidarrCatalogueTile> {
     final _api = LidarrAPI.from(LunaProfile.current);
     await _api
         .refreshArtist(widget.data.artistID)
-        .then((_) => showLunaSuccessSnackBar(
-            title: 'Refreshing...', message: widget.data.title))
+        .then<void>((_) async {
+          if (mounted) await widget.refresh();
+        })
         .catchError((error) =>
             showLunaErrorSnackBar(title: 'Failed to Refresh', error: error));
   }

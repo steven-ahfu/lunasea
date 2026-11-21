@@ -15,7 +15,12 @@ Future<SonarrSeries> _commandAddSeries(
 }) async {
   Map<String, dynamic> _payload = series.toJson();
   _payload.addAll({
-    'monitored': true,
+    'monitored': monitorType != SonarrSeriesMonitorType.NONE,
+    if (monitorType == SonarrSeriesMonitorType.NONE && series.seasons != null)
+      'seasons': [
+        for (final season in series.seasons!)
+          {...season.toJson(), 'monitored': false},
+      ],
     'qualityProfileId': qualityProfile.id,
     if (languageProfile != null) 'languageProfileId': languageProfile.id,
     'seasonFolder': seasonFolder,

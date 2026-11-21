@@ -16,6 +16,7 @@ class SonarrSeriesDetailsOverviewDescriptionTile extends StatelessWidget {
       posterPlaceholderIcon: LunaIcons.VIDEO_CAM,
       backgroundUrl: context.read<SonarrState>().getFanartURL(series!.id),
       posterUrl: context.read<SonarrState>().getPosterURL(series!.id),
+      posterMonitored: series!.monitored,
       posterHeaders: context.read<SonarrState>().headers,
       title: series!.title,
       body: [

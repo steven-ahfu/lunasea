@@ -52,7 +52,7 @@ class ChaptarrBook {
   final String foreignBookId;
   final String foreignAuthorId;
   final ChaptarrFormat? format;
-  final bool monitored;
+  bool monitored;
   final bool hasFiles;
   final String narrator;
   final Map<ChaptarrFormat, List<ChaptarrEdition>> _editions;
